@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { IdeaConfirmationOutput } from "@valid8/shared";
-import ActivityLog from "./ActivityLog.tsx";
+import ActivityFeed, { type ActivityItem } from "./ActivityFeed.tsx";
+import { friendlyApiError } from "../utils/friendlyMessages.ts";
 
 interface Props {
   ideaText: string;
@@ -13,23 +14,23 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
   const [editing, setEditing] = useState(false);
   const [revised, setRevised] = useState("");
   const [busy, setBusy] = useState(false);
-  const [actionLog, setActionLog] = useState<string[]>([]);
+  const [actionItems, setActionItems] = useState<ActivityItem[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function handleConfirm() {
     setBusy(true);
     setActionError(null);
-    const line = "POST /api/workflows/…/confirm (confirmed)";
-    setActionLog([line]);
-    console.info(`[Valid8] ${line}`);
+    console.info("[Valid8] confirm idea");
+    setActionItems([{ text: "Saving your confirmation…", tone: "muted" }, { text: "Starting market research and your landing page…" }]);
     try {
       await onConfirm();
       console.info("[Valid8] Idea confirmed — workflow tasks will start.");
     } catch (e) {
       console.error("[Valid8] confirm failed", e);
-      const msg = e instanceof Error ? e.message : "Confirmation failed";
+      const raw = e instanceof Error ? e.message : "Confirmation failed";
+      const msg = friendlyApiError(raw);
       setActionError(msg);
-      setActionLog((prev) => [...prev, `Error: ${msg}`]);
+      setActionItems((prev) => [...prev, { text: msg, tone: "error" }]);
     } finally {
       setBusy(false);
     }
@@ -39,9 +40,11 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
     if (!revised.trim()) return;
     setBusy(true);
     setActionError(null);
-    const line = "POST /api/workflows/…/confirm (revised idea)";
-    setActionLog([line]);
-    console.info(`[Valid8] ${line}`);
+    console.info("[Valid8] revise idea");
+    setActionItems([
+      { text: "Sending your updated idea…", tone: "muted" },
+      { text: "Re-reading your idea so we can continue…" },
+    ]);
     try {
       await onRevise(revised.trim());
       console.info("[Valid8] Revised idea submitted — re-analyzing.");
@@ -49,9 +52,10 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
       setRevised("");
     } catch (e) {
       console.error("[Valid8] revise failed", e);
-      const msg = e instanceof Error ? e.message : "Request failed";
+      const raw = e instanceof Error ? e.message : "Request failed";
+      const msg = friendlyApiError(raw);
       setActionError(msg);
-      setActionLog((prev) => [...prev, `Error: ${msg}`]);
+      setActionItems((prev) => [...prev, { text: msg, tone: "error" }]);
     } finally {
       setBusy(false);
     }
@@ -104,9 +108,9 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
 
         {editing ? (
           <div>
-            {busy && actionLog.length > 0 && (
+            {busy && actionItems.length > 0 && (
               <div className="mb-3">
-                <ActivityLog lines={actionLog} />
+                <ActivityFeed items={actionItems} title="What's happening" />
               </div>
             )}
             {actionError && !busy && (
@@ -138,7 +142,7 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
-            {busy && actionLog.length > 0 && <ActivityLog lines={actionLog} />}
+            {busy && actionItems.length > 0 && <ActivityFeed items={actionItems} title="What's happening" />}
             {actionError && !busy && (
               <p className="text-sm text-red-600 text-center max-w-md">{actionError}</p>
             )}

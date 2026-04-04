@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import type { ContactPipeline, CallInsight } from "../mock.ts";
 
 // ---------------------------------------------------------------------------
@@ -91,6 +91,11 @@ export function buildGraphNodes(
 
 const PAD = { top: 28, right: 24, bottom: 44, left: 56 };
 const NODE_R = 7;
+/** Minimum px between pointer and tooltip box so the cursor stays visible and clear of the panel */
+const CURSOR_GAP = 22;
+/** Approximate tooltip size for flip/flip (avoid covering the pointer) */
+const TOOLTIP_W = 188;
+const TOOLTIP_H = 118;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -105,8 +110,22 @@ export default function ContactGraph({ contacts, callInsights }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [boxPx, setBoxPx] = useState({ w: 0, h: 0 });
 
   const nodes = useMemo(() => buildGraphNodes(contacts, callInsights), [contacts, callInsights]);
+
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const measure = () => {
+      const r = svg.getBoundingClientRect();
+      setBoxPx({ w: r.width, h: r.height });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(svg);
+    return () => ro.disconnect();
+  }, []);
 
   const handleMouseEnter = useCallback(
     (node: GraphNode, e: React.MouseEvent<SVGCircleElement>) => {
@@ -138,7 +157,9 @@ export default function ContactGraph({ contacts, callInsights }: Props) {
   const hoveredNode = nodes.find((n) => n.id === hovered);
 
   return (
-    <div className="relative w-full h-full bg-[#0d1117] rounded-lg overflow-hidden">
+    <div className="relative w-full h-full min-h-[200px] rounded-lg">
+      {/* Inner clips the dark fill; outer stays overflow-visible so tooltips and cursor aren’t clipped */}
+      <div className="absolute inset-0 rounded-lg overflow-hidden bg-[#0d1117]">
       <svg
         ref={svgRef}
         viewBox="0 0 500 400"
@@ -224,6 +245,7 @@ export default function ContactGraph({ contacts, callInsights }: Props) {
           );
         })}
       </svg>
+      </div>
 
       {/* Legend */}
       <div className="absolute top-2.5 right-3 flex flex-col gap-1.5 bg-[#161b22]/90 backdrop-blur-sm rounded-md px-2.5 py-2 border border-white/5">
@@ -240,7 +262,7 @@ export default function ContactGraph({ contacts, callInsights }: Props) {
 
       {/* Tooltip */}
       {hoveredNode && (
-        <Tooltip node={hoveredNode} x={tooltipPos.x} y={tooltipPos.y} />
+        <Tooltip node={hoveredNode} x={tooltipPos.x} y={tooltipPos.y} boxW={boxPx.w} boxH={boxPx.h} />
       )}
     </div>
   );
@@ -318,18 +340,47 @@ function GridLines() {
 // Tooltip
 // ---------------------------------------------------------------------------
 
-function Tooltip({ node, x, y }: { node: GraphNode; x: number; y: number }) {
+function Tooltip({
+  node,
+  x,
+  y,
+  boxW,
+  boxH,
+}: {
+  node: GraphNode;
+  x: number;
+  y: number;
+  boxW: number;
+  boxH: number;
+}) {
   const cfg = STAGE_CONFIG[node.stage];
-  const flipped = x > 300;
-  const above = y > 250;
+  const w = boxW > 0 ? boxW : 500;
+  const h = boxH > 0 ? boxH : 400;
+
+  // Keep the tooltip fully to one side of the pointer with CURSOR_GAP so the cursor stays visible
+  const placeRight = x + TOOLTIP_W + CURSOR_GAP < w;
+  const placeBelow = y + TOOLTIP_H + CURSOR_GAP < h;
+
+  let left: number;
+  let top: number;
+  if (placeRight) {
+    left = x + CURSOR_GAP;
+  } else {
+    left = x - TOOLTIP_W - CURSOR_GAP;
+  }
+  if (placeBelow) {
+    top = y + CURSOR_GAP;
+  } else {
+    top = y - TOOLTIP_H - CURSOR_GAP;
+  }
+
+  left = Math.max(8, Math.min(left, w - TOOLTIP_W - 8));
+  top = Math.max(8, Math.min(top, h - TOOLTIP_H - 8));
 
   return (
     <div
-      className="absolute pointer-events-none z-10 bg-[#161b22] border border-white/10 rounded-lg px-3 py-2.5 shadow-xl min-w-[160px]"
-      style={{
-        left: flipped ? x - 170 : x + 14,
-        top: above ? y - 90 : y + 14,
-      }}
+      className="absolute pointer-events-none z-10 bg-[#161b22] border border-white/10 rounded-lg px-3 py-2.5 shadow-xl min-w-[160px] max-w-[188px]"
+      style={{ left, top }}
     >
       <div className="text-xs font-semibold text-white mb-1">{node.name}</div>
       <div className="text-[10px] text-gray-400 mb-2">

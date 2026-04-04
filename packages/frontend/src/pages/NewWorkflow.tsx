@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createWorkflow } from "../api.ts";
-import ActivityLog from "../components/ActivityLog.tsx";
+import ActivityFeed, { type ActivityItem } from "../components/ActivityFeed.tsx";
+import { friendlyApiError } from "../utils/friendlyMessages.ts";
 
 export default function NewWorkflow() {
   const [idea, setIdea] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [log, setLog] = useState<string[]>([]);
+  const [items, setItems] = useState<ActivityItem[]>([]);
   const navigate = useNavigate();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -15,19 +16,24 @@ export default function NewWorkflow() {
     if (!idea.trim()) return;
     setSubmitting(true);
     setError(null);
-    const lines = ["POST /api/workflows", "Creating workflow and idea confirmation task…"];
-    setLog(lines);
-    lines.forEach((l) => console.info(`[Valid8] ${l}`));
+    console.info("[Valid8] POST /api/workflows");
+    setItems([
+      { text: "Setting up your validation workspace…", tone: "muted" },
+      { text: "Sending your idea securely…" },
+    ]);
     try {
       const result = await createWorkflow(idea.trim());
-      const next = `Created workflow ${result.id.slice(0, 8)}…`;
-      console.info(`[Valid8] ${next}`);
-      setLog((prev) => [...prev, next, "Redirecting…"]);
+      console.info("[Valid8] workflow created", result.id);
+      setItems((prev) => [
+        ...prev,
+        { text: "Opening your dashboard…", tone: "success" },
+      ]);
       navigate(`/workflow/${result.id}`);
     } catch (err) {
       console.error("[Valid8] createWorkflow failed", err);
-      const msg = err instanceof Error ? err.message : "Something went wrong";
-      setLog((prev) => [...prev, `Error: ${msg}`]);
+      const raw = err instanceof Error ? err.message : "Something went wrong";
+      const msg = friendlyApiError(raw);
+      setItems((prev) => [...prev, { text: msg, tone: "error" }]);
       setError(msg);
       setSubmitting(false);
     }
@@ -60,9 +66,9 @@ export default function NewWorkflow() {
             disabled={submitting}
             autoFocus
           />
-          {submitting && log.length > 0 && (
-            <div className="mt-3">
-              <ActivityLog lines={log} />
+          {submitting && items.length > 0 && (
+            <div className="mt-4">
+              <ActivityFeed items={items} title="What's happening" />
             </div>
           )}
           {error && <div className="mt-2 text-sm text-red-600">{error}</div>}

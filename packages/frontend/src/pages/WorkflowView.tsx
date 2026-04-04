@@ -13,7 +13,9 @@ import OutreachPanel from "../components/OutreachPanel.tsx";
 import WebsitePreview from "../components/WebsitePreview.tsx";
 import MarketResearchPanel from "../components/MarketResearchPanel.tsx";
 import AnalyticsBar from "../components/AnalyticsBar.tsx";
-import ActivityLog from "../components/ActivityLog.tsx";
+import ActivityFeed, { type ActivityItem } from "../components/ActivityFeed.tsx";
+import WorkflowLiveActivity from "../components/WorkflowLiveActivity.tsx";
+import { friendlyApiError } from "../utils/friendlyMessages.ts";
 import type { ContactPipeline, QualitativeInsights } from "../mock.ts";
 import { MOCK_QUALITATIVE, buildQualitativeInsights } from "../mock.ts";
 import type { CallInsight } from "../mock.ts";
@@ -144,12 +146,12 @@ function computeAnalytics(contacts: ContactPipeline[]): Analytics {
 // ---------------------------------------------------------------------------
 
 const STEPS = [
-  { type: "idea_confirmation", label: "Confirm" },
-  { type: "market_research", label: "Research" },
+  { type: "idea_confirmation", label: "Idea" },
+  { type: "market_research", label: "Market" },
   { type: "base_landing_page", label: "Page" },
-  { type: "persona_identification", label: "Personas" },
+  { type: "persona_identification", label: "People" },
   { type: "contact_discovery", label: "Contacts" },
-  { type: "send_email", label: "Outreach" },
+  { type: "send_email", label: "Email" },
   { type: "results_summary", label: "Results" },
 ] as const;
 
@@ -209,34 +211,32 @@ export default function WorkflowView() {
   const [workflow, setWorkflow] = useState<WorkflowViewType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [loadLog, setLoadLog] = useState<string[]>([]);
+  const [loadItems, setLoadItems] = useState<ActivityItem[]>([]);
   const [pollError, setPollError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
 
   useEffect(() => {
     if (!id) return;
-    const initialLines = [
-      `GET /api/workflows/${id.slice(0, 8)}…`,
-      "Fetching workflow state…",
-    ];
-    setLoadLog(initialLines);
-    initialLines.forEach((l) => console.info(`[Valid8] ${l}`));
+    console.info(`[Valid8] GET /api/workflows/${id}`);
+
+    setLoadItems([
+      { text: "Connecting to your workspace…", tone: "muted" },
+      { text: "Loading your validation run…" },
+    ]);
 
     getWorkflow(id)
       .then((w) => {
-        const ok = "Workflow loaded.";
-        console.info(`[Valid8] ${ok}`);
-        setLoadLog((prev) => [...prev, ok]);
+        console.info("[Valid8] workflow loaded", id);
+        setLoadItems((prev) => [...prev, { text: "You're up to date.", tone: "success" }]);
         setWorkflow(w);
         setPollError(null);
       })
       .catch((e: unknown) => {
         const message = e instanceof Error ? e.message : String(e);
         console.error("[Valid8] getWorkflow failed", e);
-        const fail = `Failed: ${message}`;
-        console.info(`[Valid8] ${fail}`);
-        setLoadLog((prev) => [...prev, fail]);
-        setError(message);
+        const userMsg = friendlyApiError(message);
+        setLoadItems((prev) => [...prev, { text: userMsg, tone: "error" }]);
+        setError(userMsg);
       })
       .finally(() => setLoading(false));
 
@@ -282,22 +282,25 @@ export default function WorkflowView() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
-        <ActivityLog lines={loadLog} />
-        <p className="text-xs text-gray-400">Waiting for server…</p>
+      <div className="flex flex-col items-center justify-center h-full gap-5 px-6 bg-neutral-50">
+        <ActivityFeed
+          items={loadItems}
+          title="What's happening"
+          footer={<span className="text-neutral-400">This usually takes a second or two.</span>}
+        />
       </div>
     );
   }
 
   if (error || !workflow) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-sm gap-4 px-6">
-        <ActivityLog lines={loadLog} />
-        <div className="flex items-center gap-2 flex-wrap justify-center">
-          <span className="text-red-600">{error ?? "Not found"}</span>
-          <span className="text-gray-300">&mdash;</span>
-          <Link to="/" className="text-blue-600 hover:text-blue-800">
-            back
+      <div className="flex flex-col items-center justify-center h-full text-sm gap-5 px-6 bg-neutral-50">
+        <ActivityFeed items={loadItems} title="What we tried" />
+        <div className="flex items-center gap-2 flex-wrap justify-center text-[15px]">
+          <span className="text-red-600">{error ?? "We couldn't open this validation run."}</span>
+          <span className="text-neutral-300">&middot;</span>
+          <Link to="/" className="font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600">
+            Back to home
           </Link>
         </div>
       </div>
@@ -368,25 +371,28 @@ function Dashboard({
       {pollError && (
         <div
           role="alert"
-          className="shrink-0 flex items-start justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 m-4 mb-0 text-xs text-amber-900"
+          className="shrink-0 flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 m-4 mb-0 text-[13px] text-amber-950 leading-snug"
         >
           <span>
-            <span className="font-semibold">Update failed: </span>
-            {pollError}
-            <span className="text-amber-700"> (showing last good data; check console)</span>
+            <span className="font-semibold">Couldn’t refresh the latest status. </span>
+            You’re still seeing the last information we loaded. We’ll try again automatically. If this
+            keeps up, check your connection — technical details are in the browser console.
           </span>
           <button
             type="button"
             onClick={onDismissPollError}
-            className="shrink-0 text-amber-700 hover:text-amber-900 underline"
+            className="shrink-0 text-sm font-medium text-amber-900 hover:text-amber-950 underline underline-offset-2"
           >
             Dismiss
           </button>
         </div>
       )}
-      <div className="px-5 py-4 bg-white border-b border-neutral-100 flex items-center justify-between gap-4 shrink-0">
-        <h1 className="text-[15px] font-semibold text-neutral-900 truncate">{workflow.ideaText}</h1>
-        <ProgressBar workflow={workflow} />
+      <div className="px-5 py-4 bg-white border-b border-neutral-100 flex flex-col gap-3 shrink-0">
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-[15px] font-semibold text-neutral-900 truncate">{workflow.ideaText}</h1>
+          <ProgressBar workflow={workflow} />
+        </div>
+        <WorkflowLiveActivity workflow={workflow} />
       </div>
 
       {/* Content */}

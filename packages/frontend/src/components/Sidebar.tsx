@@ -1,4 +1,4 @@
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, NavLink, useParams, useNavigate } from "react-router-dom";
 import type { WorkflowView } from "@valid8/shared";
 import { deleteWorkflow } from "../api.ts";
 
@@ -41,6 +41,18 @@ export default function Sidebar({ workflows }: { workflows: WorkflowView[] }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 pb-3">
+        <NavLink
+          to="/transcripts"
+          className={({ isActive }) =>
+            `block px-3 py-2 mb-2 rounded-md text-[13px] transition-colors ${
+              isActive
+                ? "bg-white/10 text-white"
+                : "text-neutral-400 hover:bg-white/5 hover:text-neutral-200"
+            }`
+          }
+        >
+          Call transcripts
+        </NavLink>
         <div className="text-[10px] font-medium text-neutral-500 uppercase tracking-widest mb-2 px-2">
           Workflows
         </div>

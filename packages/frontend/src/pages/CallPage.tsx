@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import VoiceOrb from "../components/VoiceOrb.tsx";
-import ActivityLog from "../components/ActivityLog.tsx";
+import ActivityFeed, { type ActivityItem } from "../components/ActivityFeed.tsx";
+import { friendlyApiError } from "../utils/friendlyMessages.ts";
 
 type CallState =
   | "loading"
@@ -35,38 +36,48 @@ export default function CallPage() {
   const [displayText, setDisplayText] = useState("");
   const [liveTranscript, setLiveTranscript] = useState("");
   const [error, setError] = useState("");
-  const [loadLog, setLoadLog] = useState<string[]>([]);
+  const [loadItems, setLoadItems] = useState<ActivityItem[]>([]);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const responsesRef = useRef<QA[]>([]);
   const useFallbackRef = useRef(false);
+  /** Active Web Speech recognition — stopped by "Done" or silence timeout. */
+  const activeRecRef = useRef<{ stop: () => void } | null>(null);
 
   useEffect(() => {
     if (!contactId) return;
-    const lines = [`GET /api/call/session/${contactId.slice(0, 8)}…`, "Loading interview session…"];
-    setLoadLog(lines);
-    lines.forEach((l) => console.info(`[Valid8] ${l}`));
+    console.info(`[Valid8] GET /api/call/session/${contactId}`);
+    setLoadItems([
+      { text: "Preparing your interview…", tone: "muted" },
+      { text: "Loading who you’ll be speaking with…" },
+    ]);
     fetch(`/api/call/session/${contactId}`)
       .then((res) => {
         if (!res.ok) {
-          const msg = `HTTP ${res.status} — session not found`;
           console.error("[Valid8] call session fetch failed", res.status, contactId);
-          throw new Error(msg);
+          throw new Error(`HTTP ${res.status}`);
         }
         return res.json();
       })
       .then((data: SessionData) => {
         console.info(`[Valid8] Session loaded for ${data.contactName}`);
-        setLoadLog((prev) => [...prev, `Ready — ${data.contactName} @ ${data.company}`]);
+        setLoadItems((prev) => [
+          ...prev,
+          {
+            text: `You’re set — this call is with ${data.contactName} at ${data.company}.`,
+            tone: "success",
+          },
+        ]);
         setSession(data);
         setState("welcome");
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : String(err);
+        const raw = err instanceof Error ? err.message : String(err);
         console.error("[Valid8] call session error", err);
-        setLoadLog((prev) => [...prev, `Error: ${message}`]);
-        setError(message);
+        const msg = friendlyApiError(raw);
+        setLoadItems((prev) => [...prev, { text: msg, tone: "error" }]);
+        setError(msg);
         setState("error");
       });
   }, [contactId]);
@@ -98,7 +109,10 @@ export default function CallPage() {
           });
 
           const ct = res.headers.get("content-type") ?? "";
-          if (ct.includes("audio")) {
+          if (ct.includes("application/json")) {
+            const j = (await res.json()) as { fallback?: boolean };
+            if (j.fallback) useFallbackRef.current = true;
+          } else if (ct.includes("audio")) {
             const buf = await res.arrayBuffer();
             const decoded = await ctx.decodeAudioData(buf);
             const source = ctx.createBufferSource();
@@ -108,8 +122,9 @@ export default function CallPage() {
               source.onended = () => resolve();
               source.start();
             });
+          } else {
+            useFallbackRef.current = true;
           }
-          useFallbackRef.current = true;
         } catch {
           useFallbackRef.current = true;
         }
@@ -141,13 +156,52 @@ export default function CallPage() {
         return;
       }
 
+      /** Pause ~8s after last speech before ending (was 2.5s — too aggressive). */
+      const SILENCE_MS = 8000;
+      /** Hard cap per answer. */
+      const MAX_MS = 90_000;
+
       const rec = new SR();
-      rec.continuous = false;
+      rec.continuous = true;
       rec.interimResults = true;
       rec.lang = "en-US";
 
       let final = "";
-      let silenceTimeout: ReturnType<typeof setTimeout>;
+      let silenceTimeout: ReturnType<typeof setTimeout> | undefined;
+      let settled = false;
+
+      const cleanup = () => {
+        activeRecRef.current = null;
+        if (silenceTimeout) clearTimeout(silenceTimeout);
+      };
+
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(final.trim() || "(no response)");
+      };
+
+      const scheduleSilenceStop = () => {
+        if (silenceTimeout) clearTimeout(silenceTimeout);
+        silenceTimeout = setTimeout(() => {
+          try {
+            rec.stop();
+          } catch {
+            /* noop */
+          }
+        }, SILENCE_MS);
+      };
+
+      activeRecRef.current = {
+        stop: () => {
+          try {
+            rec.stop();
+          } catch {
+            /* noop */
+          }
+        },
+      };
 
       rec.onresult = (e: any) => {
         let interim = "";
@@ -156,19 +210,32 @@ export default function CallPage() {
           else interim += e.results[i][0].transcript;
         }
         setLiveTranscript(final + interim);
-        clearTimeout(silenceTimeout);
-        silenceTimeout = setTimeout(() => rec.stop(), 2500);
+        scheduleSilenceStop();
       };
 
-      rec.onerror = () => resolve(final.trim() || "(no response)");
+      const maxTimeout = setTimeout(() => {
+        try {
+          rec.stop();
+        } catch {
+          /* noop */
+        }
+      }, MAX_MS);
+
+      rec.onerror = () => {
+        clearTimeout(maxTimeout);
+        try {
+          rec.stop();
+        } catch {
+          /* noop */
+        }
+        finish();
+      };
+
       rec.onend = () => {
-        clearTimeout(silenceTimeout);
-        resolve(final.trim() || "(no response)");
+        clearTimeout(maxTimeout);
+        finish();
       };
 
-      setTimeout(() => {
-        try { rec.stop(); } catch { /* already stopped */ }
-      }, 30_000);
       rec.start();
     });
   }, []);
@@ -224,8 +291,8 @@ export default function CallPage() {
     return (
       <Page>
         <div className="w-full max-w-md space-y-3">
-          <ActivityLog lines={loadLog} title="Session" />
-          <p className="text-white/40 text-sm text-center">Connecting…</p>
+          <ActivityFeed items={loadItems} title="Getting ready" variant="dark" />
+          <p className="text-white/50 text-sm text-center">One moment…</p>
         </div>
       </Page>
     );
@@ -235,8 +302,8 @@ export default function CallPage() {
     return (
       <Page>
         <div className="w-full max-w-md space-y-3">
-          <ActivityLog lines={loadLog} title="Session" />
-          <div className="text-red-400 text-sm text-center">{error}</div>
+          <ActivityFeed items={loadItems} title="What we tried" variant="dark" />
+          <div className="text-red-300 text-sm text-center leading-relaxed">{error}</div>
         </div>
       </Page>
     );
@@ -319,6 +386,13 @@ export default function CallPage() {
                 current={currentQ}
                 mode="listening"
               />
+              <button
+                type="button"
+                onClick={() => activeRecRef.current?.stop()}
+                className="mt-4 px-5 py-2 rounded-full text-sm font-medium bg-white/10 text-white/90 hover:bg-white/20 border border-white/15 transition-colors"
+              >
+                Done speaking
+              </button>
             </>
           )}
 

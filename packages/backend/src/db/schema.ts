@@ -81,3 +81,19 @@ export const pageEvents = sqliteTable("page_events", {
     .$defaultFn(() => new Date()),
   metadataJson: text("metadata_json"),
 });
+
+/** Persisted AI interview transcripts (browser STT + scripted questions). */
+export const callTranscripts = sqliteTable("call_transcripts", {
+  id: text("id").primaryKey(),
+  workflowId: text("workflow_id")
+    .notNull()
+    .references(() => workflows.id),
+  contactId: text("contact_id")
+    .notNull()
+    .references(() => contacts.id),
+  contactName: text("contact_name").notNull(),
+  transcript: text("transcript").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});

@@ -6,6 +6,7 @@ import Sidebar from "./components/Sidebar.tsx";
 import NewWorkflow from "./pages/NewWorkflow.tsx";
 import WorkflowViewPage from "./pages/WorkflowView.tsx";
 import CallPage from "./pages/CallPage.tsx";
+import TranscriptsPage from "./pages/TranscriptsPage.tsx";
 
 function MainLayout({ workflows }: { workflows: WorkflowView[] }) {
   return (
@@ -43,6 +44,7 @@ export default function App() {
       <Route element={<MainLayout workflows={workflows} />}>
         <Route path="/" element={<Navigate to="/new" replace />} />
         <Route path="/new" element={<NewWorkflow />} />
+        <Route path="/transcripts" element={<TranscriptsPage />} />
         <Route path="/workflow/:id" element={<WorkflowViewPage />} />
       </Route>
     </Routes>

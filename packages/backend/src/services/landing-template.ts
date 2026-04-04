@@ -219,7 +219,6 @@ nav:not(.nav-dark) .nav-cta:hover{background:#1e293b}
   </div>
 </div>
 
-<div class="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
 </section>
 
 <!-- ───── Pain Points ───── -->
