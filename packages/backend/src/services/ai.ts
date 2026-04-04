@@ -340,3 +340,89 @@ The HTML should be clean and simple — no heavy design, just well-formatted tex
   });
   return object;
 }
+
+const interviewScriptSchema = z.object({
+  greeting: z
+    .string()
+    .describe(
+      "Spoken intro only: 2–4 short sentences. Thank them by first name once, set context (brief validation interview), warm and professional. No list markers. Suitable for text-to-speech.",
+    ),
+  questions: z
+    .array(z.string())
+    .length(6)
+    .describe(
+      "Exactly six questions, in order. Each is one or two short sentences max, natural speech for voice UI.",
+    ),
+});
+
+export type PersonalizedInterviewScript = z.infer<typeof interviewScriptSchema>;
+
+/**
+ * Replaces the static call script with copy tailored to this contact and idea.
+ * Questions preserve the lean-validation intent of callScript.md but must read naturally aloud.
+ */
+export async function generatePersonalizedInterviewScript(params: {
+  contactName: string;
+  contactRole: string;
+  contactCompany: string;
+  idea: IdeaConfirmationOutput | null;
+  workflowIdeaText: string;
+  persona?: {
+    title: string;
+    description: string;
+    jobsToBeDone: string[];
+    painPoints: string[];
+  } | null;
+}): Promise<PersonalizedInterviewScript> {
+  const ideaBlock = params.idea
+    ? `Structured understanding of the product (use these terms naturally, do not read field names aloud):
+- Summary: ${params.idea.summary}
+- Target customers / market: ${params.idea.targetMarket}
+- Value proposition: ${params.idea.valueProposition}
+- Revenue model: ${params.idea.revenueModel}`
+    : `The idea (only raw text is available — infer tone and positioning carefully):
+${params.workflowIdeaText}`;
+
+  const personaBlock = params.persona
+    ? `Optional persona context (this contact was bucketed here — use to tune language, not to quote verbatim):
+- Persona label: ${params.persona.title}
+- Description: ${params.persona.description}
+- Jobs to be done: ${params.persona.jobsToBeDone.join("; ")}
+- Pain points we care about: ${params.persona.painPoints.join("; ")}`
+    : "No separate persona record — infer from role and company only.";
+
+  const { object } = await generateObject({
+    model,
+    schema: interviewScriptSchema,
+    prompt: `You are rewriting a B2B validation screening script for a **voice AI interview**. The script will be read aloud with TTS and the prospect answers by speech.
+
+## Who you are speaking to (always address appropriately)
+- Name: ${params.contactName}
+- Role: ${params.contactRole}
+- Company: ${params.contactCompany}
+
+## Product / idea being validated
+${ideaBlock}
+
+## Persona
+${personaBlock}
+
+## Your task — full replacement, not a light edit
+Discard generic templates. Write a **complete new greeting and exactly six questions** that:
+1. Sound like a thoughtful human researcher talking to **this** person — not mail merge, no awkward placeholders (never "problem with [industry]" if that reads oddly; rephrase the second question so the **hypothesis pain** is clear in natural language).
+2. Match this **exact semantic sequence** (lean validation — same information goals as a standard screening call):
+   - **Q1:** Open exploration — what are the biggest problems or frictions in their role, in the context of ${params.contactCompany} (or their function if phrasing "at ${params.contactCompany}" is stiff, you may soften).
+   - **Q2:** Problem-solution fit probe — whether they feel the **core pain** your idea targets is real for them (restate the pain in concrete terms using the idea context; do NOT paste raw field values robotically).
+   - **Q3:** Economics — annual dollar impact, budget, or cost of the problem (ask clearly for a number or range).
+   - **Q4:** Why unsolved — structural or practical reasons it has not been fixed yet.
+   - **Q5:** Solution reaction — describe what you're building in plain language (from value proposition / summary), then ask if it could work for them and why or why not.
+   - **Q6:** Next step — willingness to book a follow-up sales or discovery call about buying.
+
+3. **Greeting** must be separate from the six questions. Do not repeat the greeting as Q1.
+4. Questions must be **self-contained**: the listener did not see prior slides. Avoid "that problem" without establishing it in the same question if ambiguity would break voice UX.
+5. Keep each question under ~40 words when possible. No markdown, no numbering prefix in the strings, no "Question 1:" labels.
+
+Output JSON only matching the schema.`,
+  });
+  return object;
+}

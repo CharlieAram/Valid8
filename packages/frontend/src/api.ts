@@ -72,3 +72,17 @@ export function getContacts(
 ): Promise<Array<{ id: string; name: string; email: string; company: string; role: string }>> {
   return request(`/workflows/${workflowId}/contacts`);
 }
+
+export interface CallTranscriptRow {
+  id: string;
+  workflowId: string;
+  contactId: string;
+  contactName: string;
+  transcript: string;
+  createdAt: string;
+  ideaText: string;
+}
+
+export function listCallTranscripts(): Promise<CallTranscriptRow[]> {
+  return request("/call/transcripts");
+}
