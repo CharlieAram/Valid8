@@ -31,11 +31,18 @@ function extractContacts(workflow: WorkflowViewType): ContactPipeline[] {
     (t) => t.type === "contact_discovery" && t.status === "completed",
   );
   if (!discovery?.output) return [];
+
   const { contacts } = discovery.output as ContactOutput;
   return contacts.map((contact) => {
-    const email = workflow.tasks.find((t) => t.type === "send_email" && t.scope?.contactId === contact.id);
-    const phone = workflow.tasks.find((t) => t.type === "voice_call" && t.scope?.contactId === contact.id);
-    const call = workflow.tasks.find((t) => t.type === "schedule_human_call" && t.scope?.contactId === contact.id);
+    const email = workflow.tasks.find(
+      (t) => t.type === "send_email" && t.scope?.contactId === contact.id,
+    );
+    const phone = workflow.tasks.find(
+      (t) => t.type === "voice_call" && t.scope?.contactId === contact.id,
+    );
+    const call = workflow.tasks.find(
+      (t) => t.type === "schedule_human_call" && t.scope?.contactId === contact.id,
+    );
     return {
       contact,
       email: (email?.status ?? "pending") as TaskStatus,
@@ -46,12 +53,16 @@ function extractContacts(workflow: WorkflowViewType): ContactPipeline[] {
 }
 
 function extractResearch(workflow: WorkflowViewType): MarketResearchOutput | null {
-  const task = workflow.tasks.find((t) => t.type === "market_research" && t.status === "completed");
+  const task = workflow.tasks.find(
+    (t) => t.type === "market_research" && t.status === "completed",
+  );
   return task?.output ? (task.output as MarketResearchOutput) : null;
 }
 
 function extractPage(workflow: WorkflowViewType): { url: string | null; html: string | null } {
-  const task = workflow.tasks.find((t) => t.type === "base_landing_page" && t.status === "completed");
+  const task = workflow.tasks.find(
+    (t) => t.type === "base_landing_page" && t.status === "completed",
+  );
   if (!task?.output) return { url: null, html: null };
   const output = task.output as { url?: string; html?: string };
   return { url: output.url ?? null, html: output.html ?? null };
@@ -72,7 +83,10 @@ function extractQualitative(workflow: WorkflowViewType, contacts: ContactPipelin
         hasProblem: (out.hasProblem as boolean) ?? false,
         problemValueUsd: (out.problemValueUsd as number) ?? null,
         whyUnsolved: (out.whyUnsolved as string) ?? "",
-        solutionReaction: (out.solutionReaction as { positive: boolean; comment: string }) ?? { positive: false, comment: "" },
+        solutionReaction: (out.solutionReaction as { positive: boolean; comment: string }) ?? {
+          positive: false,
+          comment: "",
+        },
         willingToTalk: (out.willingToTalk as boolean) ?? false,
       });
     }
@@ -89,32 +103,43 @@ function computeAnalytics(contacts: ContactPipeline[]): Analytics {
 
   if (total === 0) {
     return {
-      emailsSent: 0, replies: 0, replyRate: 0, pageVisits: 0,
-      paid: 0, paidRate: 0, confidence: 0,
-      conclusion: "Validation starting.",
+      emailsSent: 0,
+      replies: 0,
+      replyRate: 0,
+      pageVisits: 0,
+      paid: 0,
+      paidRate: 0,
+      confidence: 0,
+      conclusion: "Validation starting \u2014 gathering initial data.",
     };
   }
 
   return {
     emailsSent,
     replies,
-    replyRate: Math.round((replies / total) * 100),
+    replyRate: total > 0 ? Math.round((replies / total) * 100) : 0,
     pageVisits: emailsSent + Math.floor(emailsSent * 0.5),
     paid,
-    paidRate: Math.round((paid / total) * 100),
-    confidence: Math.min(95, Math.round(
-      (emailsSent / total) * 50 + (replies / Math.max(1, emailsSent)) * 30 + (paid > 0 ? 20 : 0),
-    )),
-    conclusion: paid > 0
-      ? "Paying customers found."
-      : emailsSent > 0
-        ? "Outreach in progress."
-        : "Validation starting.",
+    paidRate: total > 0 ? Math.round((paid / total) * 100) : 0,
+    confidence: Math.min(
+      95,
+      Math.round(
+        (emailsSent / total) * 50 +
+          (replies / Math.max(1, emailsSent)) * 30 +
+          (paid > 0 ? 20 : 0),
+      ),
+    ),
+    conclusion:
+      paid > 0
+        ? "Promising \u2014 paying customers found during validation."
+        : emailsSent > 0
+          ? "Outreach in progress. Collecting responses."
+          : "Validation starting \u2014 gathering initial data.",
   };
 }
 
 // ---------------------------------------------------------------------------
-// Progress
+// Progress steps
 // ---------------------------------------------------------------------------
 
 const STEPS = [
@@ -127,29 +152,46 @@ const STEPS = [
   { type: "results_summary", label: "Results" },
 ] as const;
 
-function ProgressSteps({ workflow }: { workflow: WorkflowViewType }) {
+function ProgressBar({ workflow }: { workflow: WorkflowViewType }) {
   return (
-    <div className="flex items-center gap-px">
-      {STEPS.map((step) => {
-        const s = taskStatus(workflow, step.type);
-        const done = s === "completed" || s === "skipped";
-        const active = s === "running" || s === "ready";
-        const failed = s === "failed";
+    <div className="flex items-center gap-1 shrink-0">
+      {STEPS.map((step, i) => {
+        const status = taskStatus(workflow, step.type);
+        const done = status === "completed" || status === "skipped";
+        const active = status === "running" || status === "ready";
+        const failed = status === "failed";
+
         return (
-          <div
-            key={step.type}
-            className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
-              done
-                ? "bg-emerald-500 text-white"
-                : active
-                  ? "bg-blue-500 text-white animate-pulse"
-                  : failed
-                    ? "bg-red-500 text-white"
-                    : "bg-neutral-100 text-neutral-400"
-            }`}
-            title={`${step.label}: ${s}`}
-          >
-            {step.label}
+          <div key={step.type} className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              <div
+                className={`w-2 h-2 rounded-full transition-all ${
+                  done
+                    ? "bg-emerald-500"
+                    : active
+                      ? "bg-blue-500 animate-pulse"
+                      : failed
+                        ? "bg-red-500"
+                        : "bg-neutral-200"
+                }`}
+              />
+              <span
+                className={`text-[11px] transition-colors ${
+                  done
+                    ? "text-emerald-600 font-medium"
+                    : active
+                      ? "text-blue-600 font-medium"
+                      : failed
+                        ? "text-red-500"
+                        : "text-neutral-400"
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`w-4 h-px ${done ? "bg-emerald-300" : "bg-neutral-200"}`} />
+            )}
           </div>
         );
       })}
@@ -170,37 +212,65 @@ export default function WorkflowView() {
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
     getWorkflow(id)
       .then(setWorkflow)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
     intervalRef.current = setInterval(() => getWorkflow(id).then(setWorkflow), 3000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [id]);
 
   useEffect(() => {
     if (workflow && (workflow.status === "completed" || workflow.status === "failed")) {
-      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     }
   }, [workflow?.status]);
 
-  if (loading) return <div className="flex items-center justify-center h-full text-xs text-neutral-400">Loading...</div>;
-  if (error || !workflow) return (
-    <div className="flex items-center justify-center h-full text-xs">
-      <span className="text-red-500">{error ?? "Not found"}</span>
-      <Link to="/" className="ml-3 text-neutral-400 hover:text-neutral-800">&larr; back</Link>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-neutral-50">
+        <div className="text-[13px] text-neutral-400 animate-pulse">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error || !workflow) {
+    return (
+      <div className="flex items-center justify-center h-full bg-neutral-50 text-[13px]">
+        <span className="text-red-500">{error ?? "Not found"}</span>
+        <span className="mx-2 text-neutral-300">&mdash;</span>
+        <Link to="/" className="text-neutral-500 hover:text-neutral-800 transition-colors">
+          back
+        </Link>
+      </div>
+    );
+  }
 
   const confirmTask = workflow.tasks.find((t) => t.type === "idea_confirmation");
-  if (confirmTask?.status === "waiting_for_input" && confirmTask?.output) {
+  const needsConfirmation = confirmTask?.status === "waiting_for_input";
+
+  if (needsConfirmation && confirmTask?.output) {
     return (
       <Clarification
         ideaText={workflow.ideaText}
         confirmation={confirmTask.output as IdeaConfirmationOutput}
-        onConfirm={async () => { if (id) { await confirmIdea(id, true); getWorkflow(id).then(setWorkflow); } }}
-        onRevise={async (r) => { if (id) { await confirmIdea(id, false, r); getWorkflow(id).then(setWorkflow); } }}
+        onConfirm={async () => {
+          if (id) {
+            await confirmIdea(id, true);
+            getWorkflow(id).then(setWorkflow);
+          }
+        }}
+        onRevise={async (r) => {
+          if (id) {
+            await confirmIdea(id, false, r);
+            getWorkflow(id).then(setWorkflow);
+          }
+        }}
       />
     );
   }
@@ -209,7 +279,7 @@ export default function WorkflowView() {
 }
 
 // ---------------------------------------------------------------------------
-// Dashboard — 2x2 grid with header
+// Dashboard
 // ---------------------------------------------------------------------------
 
 function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
@@ -223,16 +293,18 @@ function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
   const pageStatus = taskStatus(workflow, "base_landing_page");
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-neutral-50">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-neutral-200 flex items-center justify-between gap-4 shrink-0 bg-white">
-        <h1 className="text-sm font-semibold text-neutral-900 truncate">{workflow.ideaText}</h1>
-        <ProgressSteps workflow={workflow} />
+      <div className="px-5 py-4 bg-white border-b border-neutral-100 flex items-center justify-between gap-4 shrink-0">
+        <h1 className="text-[15px] font-semibold text-neutral-900 truncate">
+          {workflow.ideaText}
+        </h1>
+        <ProgressBar workflow={workflow} />
       </div>
 
-      {/* Grid */}
-      <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-px bg-neutral-200 min-h-0">
-        <div className="min-h-0 row-span-2">
+      {/* Content */}
+      <div className="flex-1 p-4 gap-3 grid grid-cols-2 grid-rows-2 min-h-0">
+        <div className="row-span-2 min-h-0">
           <OutreachPanel contacts={contacts} />
         </div>
         <div className="min-h-0">
@@ -244,7 +316,9 @@ function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
       </div>
 
       {/* Analytics */}
-      <AnalyticsBar analytics={analytics} qualitative={qualitative} />
+      <div className="px-4 pb-4">
+        <AnalyticsBar analytics={analytics} qualitative={qualitative} />
+      </div>
     </div>
   );
 }
