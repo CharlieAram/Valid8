@@ -113,7 +113,7 @@ export async function generatePersonas(
         })
       ),
     }),
-    prompt: `Identify 3-5 target customer personas for this B2B idea. For each, define their jobs-to-be-done and pain points that this product would address. Be specific about company types.
+    prompt: `Identify exactly 5 target customer personas for this B2B idea. For each, define their jobs-to-be-done and pain points that this product would address. List exactly 10 specific real companies per persona (not categories — actual company names that exist).
 
 Idea: ${idea}
 

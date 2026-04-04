@@ -42,27 +42,41 @@ export const contactDiscoveryHandler: TaskHandler<Input, ContactOutput> = {
         });
       }
     } else {
-      // Use Tavily to find real people matching each persona
-      for (let i = 0; i < input.personas.personas.length; i++) {
-        const persona = input.personas.personas[i];
-        const company = persona.companies[0] ?? "Unknown Co";
+      // Build a flat list of (persona, company) pairs to enrich
+      const targets: Array<{ persona: PersonaOutput["personas"][number]; company: string }> = [];
+      for (const persona of input.personas.personas) {
+        for (const company of persona.companies) {
+          targets.push({ persona, company });
+        }
+      }
 
-        const discovery = await enrichContactChannels(
-          { personaTitle: persona.title, company },
-          i
+      // Enrich in batches of 5 to avoid rate limits
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+        const batch = targets.slice(i, i + BATCH_SIZE);
+        const results = await Promise.allSettled(
+          batch.map((t, j) =>
+            enrichContactChannels({ personaTitle: t.persona.title, company: t.company }, i + j)
+          )
         );
 
-        const contactId = nanoid();
-        contacts.push({
-          id: contactId,
-          name: discovery.fullName,
-          email: discovery.email ?? "placeholder@example.com",
-          company,
-          role: persona.title,
-          personaId: persona.id,
-          linkedinUrl: discovery.linkedinUrl,
-          discovery,
-        });
+        for (let j = 0; j < results.length; j++) {
+          const result = results[j];
+          if (result.status !== "fulfilled") continue;
+          const discovery = result.value;
+          const { persona, company } = batch[j];
+          const contactId = nanoid();
+          contacts.push({
+            id: contactId,
+            name: discovery.fullName,
+            email: discovery.email ?? "placeholder@example.com",
+            company,
+            role: persona.title,
+            personaId: persona.id,
+            linkedinUrl: discovery.linkedinUrl,
+            discovery,
+          });
+        }
       }
 
       // Batch insert all contacts
@@ -84,6 +98,7 @@ export const contactDiscoveryHandler: TaskHandler<Input, ContactOutput> = {
     // Spawn per-contact outreach tasks
     for (const contact of contacts) {
       const scope = { contactId: contact.id };
+      ctx.spawn("personalize_page", scope);
       ctx.spawn("send_email", scope);
       ctx.spawn("voice_call", scope);
       ctx.spawn("schedule_human_call", scope);
