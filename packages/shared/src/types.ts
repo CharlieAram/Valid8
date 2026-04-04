@@ -85,6 +85,23 @@ export interface PersonaOutput {
   }>;
 }
 
+/** What we could resolve from the open web (Tavily + parsing). */
+export interface ContactDiscoveryResult {
+  /** Real person name (from LinkedIn title/slug or search), not a placeholder label. */
+  fullName: string;
+  /** Best email found in search snippets, or null. */
+  email: string | null;
+  linkedinUrl?: string;
+  social?: {
+    twitter?: string;
+    instagram?: string;
+    reddit?: string;
+  };
+  /** Pages Tavily used (for transparency / debugging). */
+  sources: Array<{ url: string; title?: string }>;
+  resolutionNotes?: string;
+}
+
 export interface ContactOutput {
   contacts: Array<{
     id: string;
@@ -94,6 +111,7 @@ export interface ContactOutput {
     role: string;
     personaId: string;
     linkedinUrl?: string;
+    discovery?: ContactDiscoveryResult;
   }>;
 }
 
