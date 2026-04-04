@@ -1,4 +1,4 @@
-app = "valid8"
+app = "valid8-app"
 primary_region = "ams"
 
 [build]

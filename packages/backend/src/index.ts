@@ -39,4 +39,4 @@ app.get("*", serveStatic({ root: "./public", path: "index.html" }));
 
 const port = Number(process.env.PORT) || 3000;
 console.log(`Valid8 backend running on http://localhost:${port}`);
-serve({ fetch: app.fetch, port });
+serve({ fetch: app.fetch, port, hostname: "0.0.0.0" });
