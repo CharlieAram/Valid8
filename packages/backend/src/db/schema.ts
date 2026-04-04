@@ -39,7 +39,7 @@ export const contacts = sqliteTable("contacts", {
   workflowId: text("workflow_id")
     .notNull()
     .references(() => workflows.id),
-  personaId: text("persona_id").references(() => personas.id),
+  personaId: text("persona_id"),
   name: text("name").notNull(),
   email: text("email").notNull(),
   company: text("company").notNull(),

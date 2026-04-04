@@ -28,37 +28,39 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
   }
 
   return (
-    <div className="flex items-center justify-center h-full">
+    <div className="flex items-center justify-center h-full bg-neutral-50">
       <div className="w-full max-w-2xl px-6">
         <div className="mb-6">
-          <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">
-            Initial Input
-          </h2>
-          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 text-sm text-gray-700 leading-relaxed">
+          <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-2">
+            Your input
+          </div>
+          <div className="rounded-xl bg-white border border-neutral-200 px-4 py-3 text-sm text-neutral-600 leading-relaxed">
             {ideaText}
           </div>
         </div>
 
         <div className="mb-8">
-          <h2 className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2">
-            Clarification
-          </h2>
-          <div className="border border-gray-200 rounded-lg p-5 bg-white">
-            <p className="text-sm text-gray-900 leading-relaxed mb-4">{confirmation.summary}</p>
-            <dl className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <dt className="text-xs text-gray-400 mb-0.5">Target Market</dt>
-                <dd className="text-gray-700">{confirmation.targetMarket}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-gray-400 mb-0.5">Value Proposition</dt>
-                <dd className="text-gray-700">{confirmation.valueProposition}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-gray-400 mb-0.5">Revenue Model</dt>
-                <dd className="text-gray-700">{confirmation.revenueModel}</dd>
-              </div>
-            </dl>
+          <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-2">
+            Our understanding
+          </div>
+          <div className="rounded-xl bg-white border border-neutral-200 p-5">
+            <p className="text-[15px] text-neutral-900 leading-relaxed mb-5">
+              {confirmation.summary}
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { label: "Target market", value: confirmation.targetMarket },
+                { label: "Value proposition", value: confirmation.valueProposition },
+                { label: "Revenue model", value: confirmation.revenueModel },
+              ].map((item) => (
+                <div key={item.label}>
+                  <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-wider mb-1">
+                    {item.label}
+                  </div>
+                  <div className="text-sm text-neutral-700 leading-relaxed">{item.value}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -69,20 +71,20 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
               onChange={(e) => setRevised(e.target.value)}
               placeholder="Rewrite or clarify your idea..."
               rows={4}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:border-gray-900 resize-y"
+              className="w-full border border-neutral-200 rounded-xl px-4 py-3.5 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 resize-y bg-white transition-all"
               autoFocus
             />
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleRevise}
                 disabled={!revised.trim() || busy}
-                className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-40"
+                className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-30 transition-all"
               >
                 Re-analyze
               </button>
               <button
                 onClick={() => setEditing(false)}
-                className="px-4 py-2 text-gray-500 text-sm hover:text-gray-700"
+                className="px-5 py-2.5 text-neutral-500 text-sm hover:text-neutral-700 transition-colors"
               >
                 Cancel
               </button>
@@ -93,15 +95,15 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
             <button
               onClick={handleConfirm}
               disabled={busy}
-              className="px-6 py-2.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-40"
+              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-30 transition-all"
             >
-              {busy ? "Starting..." : "Confirm \u2713"}
+              {busy ? "Starting..." : "Looks right, start"}
             </button>
             <button
               onClick={() => setEditing(true)}
-              className="px-6 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50"
+              className="px-6 py-2.5 border border-neutral-200 text-neutral-700 text-sm font-medium rounded-xl hover:bg-neutral-50 transition-all"
             >
-              Clarify \u2717
+              Not quite, let me clarify
             </button>
           </div>
         )}

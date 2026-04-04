@@ -16,7 +16,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-white text-gray-900 overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar workflows={workflows} />
       <main className="flex-1 min-w-0 h-full overflow-hidden">
         <Routes>
