@@ -158,7 +158,7 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
                 onClick={() => setEditing(true)}
                 className="px-6 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50"
               >
-                Clarify \u2717
+                Clarify {"\u2717"}
               </button>
             </div>
           </div>
