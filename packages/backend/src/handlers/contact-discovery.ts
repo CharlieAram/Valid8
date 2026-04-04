@@ -1,9 +1,9 @@
 import type { TaskHandler } from "../engine/types.js";
 import type { PersonaOutput, ContactOutput, IdeaConfirmationOutput } from "@valid8/shared";
-import { generateContacts } from "../services/ai.js";
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
+import { enrichContactChannels } from "../services/contact-enrichment.js";
 
 interface Input {
   idea: string;
@@ -27,12 +27,9 @@ export const contactDiscoveryHandler: TaskHandler<Input, ContactOutput> = {
     const existingContacts = await db
       .select()
       .from(schema.contacts)
-      .where(
-        eq(schema.contacts.workflowId, ctx.workflowId)
-      );
+      .where(eq(schema.contacts.workflowId, ctx.workflowId));
 
     if (existingContacts.length > 0) {
-      // Use manually added contacts
       for (const c of existingContacts) {
         contacts.push({
           id: c.id,
@@ -45,21 +42,27 @@ export const contactDiscoveryHandler: TaskHandler<Input, ContactOutput> = {
         });
       }
     } else {
-      // Generate synthetic contacts via AI (2 per persona)
-      for (const persona of input.personas.personas) {
-        const generated = await generateContacts(persona, input.idea, 2);
-        for (const g of generated) {
-          const contactId = nanoid();
-          contacts.push({
-            id: contactId,
-            name: g.name,
-            email: g.email,
-            company: g.company,
-            role: g.role,
-            personaId: persona.id,
-            linkedinUrl: g.linkedinUrl,
-          });
-        }
+      // Use Tavily to find real people matching each persona
+      for (let i = 0; i < input.personas.personas.length; i++) {
+        const persona = input.personas.personas[i];
+        const company = persona.companies[0] ?? "Unknown Co";
+
+        const discovery = await enrichContactChannels(
+          { personaTitle: persona.title, company },
+          i
+        );
+
+        const contactId = nanoid();
+        contacts.push({
+          id: contactId,
+          name: discovery.fullName,
+          email: discovery.email ?? "placeholder@example.com",
+          company,
+          role: persona.title,
+          personaId: persona.id,
+          linkedinUrl: discovery.linkedinUrl,
+          discovery,
+        });
       }
 
       // Batch insert all contacts
@@ -81,7 +84,6 @@ export const contactDiscoveryHandler: TaskHandler<Input, ContactOutput> = {
     // Spawn per-contact outreach tasks
     for (const contact of contacts) {
       const scope = { contactId: contact.id };
-      ctx.spawn("personalize_page", scope);
       ctx.spawn("send_email", scope);
       ctx.spawn("voice_call", scope);
       ctx.spawn("schedule_human_call", scope);

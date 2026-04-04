@@ -6,7 +6,6 @@ interface Props {
   status: TaskStatus;
 }
 
-/** Fix legacy bad URLs where `/` was prefixed before `https://` (browser treated them as same-origin paths). */
 function normalizePageUrl(url: string | null): string | null {
   if (!url) return null;
   if (url.startsWith("/http://") || url.startsWith("/https://")) return url.slice(1);
@@ -39,33 +38,27 @@ export default function WebsitePreview({ url, html, status }: Props) {
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg flex flex-col overflow-hidden h-full">
-      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3 shrink-0">
+    <div className="border border-neutral-200 flex flex-col overflow-hidden h-full bg-white">
+      <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-gray-900">Website Generated</h3>
-          <p className="text-[11px] text-gray-500 mt-0.5 truncate">
-            {hosted
-              ? "Hosted on InsForge (public URL)"
-              : hasPreview
-                ? "Preview only — set INSFORGE_URL + INSFORGE_API_KEY to deploy"
-                : status === "running"
-                  ? "Generating…"
-                  : ""}
-          </p>
+          <h3 className="text-[13px] font-semibold text-neutral-900">Landing page</h3>
+          {hasPreview && (
+            <p className="text-[10px] text-neutral-400 mt-0.5">
+              {hosted ? "Hosted on InsForge" : "Local preview"}
+            </p>
+          )}
         </div>
         {hasPreview && (
           <button
             type="button"
             onClick={handlePopout}
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-            title="Open landing page in a new browser tab"
+            className="text-[11px] text-neutral-500 underline cursor-pointer hover:text-neutral-900 transition-colors"
           >
-            <span aria-hidden>↗</span>
             Open in new tab
           </button>
         )}
       </div>
-      <div className="flex-1 bg-gray-50 flex items-center justify-center min-h-0">
+      <div className="flex-1 bg-neutral-50 flex items-center justify-center min-h-0">
         {hosted ? (
           <iframe
             src={pageUrl!}
@@ -81,11 +74,11 @@ export default function WebsitePreview({ url, html, status }: Props) {
             sandbox="allow-scripts"
           />
         ) : status === "running" ? (
-          <div className="text-sm text-gray-400 animate-pulse">Generating landing page...</div>
+          <div className="text-[13px] text-neutral-400 animate-pulse">Generating page...</div>
         ) : status === "failed" ? (
-          <div className="text-sm text-red-500">Generation failed</div>
+          <div className="text-[13px] text-red-500">Generation failed</div>
         ) : (
-          <div className="text-sm text-gray-300">Waiting to start...</div>
+          <div className="text-[13px] text-neutral-300">Waiting to start...</div>
         )}
       </div>
     </div>

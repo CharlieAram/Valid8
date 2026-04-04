@@ -3,65 +3,49 @@ import type { ContactOutput, TaskStatus } from "@valid8/shared";
 import type { ContactPipeline, CallInsight } from "../mock.ts";
 import ContactGraph from "./ContactGraph.tsx";
 
-function LinkedInLine({ contact }: { contact: ContactOutput["contacts"][number] }) {
-  const url = contact.linkedinUrl ?? contact.discovery?.linkedinUrl;
-  if (!url) {
-    return (
-      <div className="mt-0.5 text-[10px] text-gray-400">No LinkedIn profile found</div>
-    );
-  }
+const DOT: Record<TaskStatus, string> = {
+  completed: "bg-emerald-500",
+  running: "bg-blue-500 animate-pulse",
+  ready: "bg-neutral-300",
+  pending: "bg-neutral-300",
+  waiting_for_input: "bg-amber-400",
+  failed: "bg-red-500",
+  skipped: "bg-neutral-300",
+};
+
+function StatusDot({ status, label }: { status: TaskStatus; label: string }) {
   return (
-    <div className="mt-0.5">
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-      >
-        LinkedIn
-      </a>
+    <div className="flex items-center gap-1" title={`${label}: ${status}`}>
+      <div className={`w-1.5 h-1.5 rounded-full ${DOT[status]}`} />
+      <span className="text-[11px] text-neutral-500">{label}</span>
     </div>
   );
 }
 
-const STAGE_STYLE: Record<TaskStatus, string> = {
-  completed: "bg-green-500",
-  running: "bg-blue-500 animate-pulse",
-  ready: "bg-gray-300",
-  pending: "bg-gray-300",
-  waiting_for_input: "bg-amber-500",
-  failed: "bg-red-500",
-  skipped: "bg-gray-400",
-};
-
-const STAGE_TEXT: Record<TaskStatus, string> = {
-  completed: "text-gray-700",
-  running: "text-blue-600",
-  ready: "text-gray-400",
-  pending: "text-gray-400",
-  waiting_for_input: "text-amber-600",
-  failed: "text-red-600",
-  skipped: "text-gray-400",
-};
-
-function Stage({ status, label }: { status: TaskStatus; label: string }) {
+function LinkedInLink({ contact }: { contact: ContactOutput["contacts"][number] }) {
+  const url = contact.linkedinUrl ?? contact.discovery?.linkedinUrl;
+  if (!url) return null;
   return (
-    <div className="flex items-center gap-1.5">
-      <div className={`w-2 h-2 rounded-full shrink-0 ${STAGE_STYLE[status]}`} />
-      <span className={`text-xs whitespace-nowrap ${STAGE_TEXT[status]}`}>{label}</span>
-    </div>
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-[11px] text-blue-600 hover:text-blue-800 hover:underline"
+    >
+      LinkedIn
+    </a>
   );
 }
 
 function Initials({ name }: { name: string }) {
-  const initials = name
+  const s = name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .slice(0, 2);
   return (
-    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600 shrink-0">
-      {initials}
+    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[11px] font-medium text-gray-600 shrink-0">
+      {s}
     </div>
   );
 }
@@ -134,38 +118,40 @@ export default function OutreachPanel({
                   {c.contact.role}
                   <span className="text-gray-400"> · {c.contact.company}</span>
                 </div>
-              <LinkedInLine contact={c.contact} />
-              <a
-                href={`/call/${c.contact.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-0.5 text-xs text-indigo-500 hover:text-indigo-400 hover:underline"
-              >
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
-                </svg>
-                AI interview
-              </a>
-            </div>
+                <LinkedInLink contact={c.contact} />
+                <a
+                  href={`/call/${c.contact.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-0.5 text-xs text-indigo-500 hover:text-indigo-400 hover:underline"
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"
+                    />
+                  </svg>
+                  AI interview
+                </a>
+              </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <Stage status={c.email} label="Email" />
+                <StatusDot status={c.email} label="Email" />
                 <span className="text-gray-300 text-[10px]">&rarr;</span>
-                <Stage status={c.phone} label="Phone" />
+                <StatusDot status={c.phone} label="Phone" />
                 <span className="text-gray-300 text-[10px]">&rarr;</span>
                 {c.paid ? (
                   <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
                     Paid!
                   </span>
                 ) : (
-                  <Stage status="pending" label="Paid" />
+                  <StatusDot status="pending" label="Paid" />
                 )}
               </div>
             </div>
           ))}
           {contacts.length === 0 && (
-            <div className="px-4 py-12 text-center text-xs text-gray-400">
-              Discovering contacts...
-            </div>
+            <div className="px-4 py-12 text-center text-xs text-gray-400">Discovering contacts...</div>
           )}
         </div>
       ) : (
@@ -173,9 +159,7 @@ export default function OutreachPanel({
           {contacts.length > 0 ? (
             <ContactGraph contacts={contacts} callInsights={callInsights} />
           ) : (
-            <div className="flex items-center justify-center h-full text-xs text-gray-400">
-              Discovering contacts...
-            </div>
+            <div className="flex items-center justify-center h-full text-xs text-gray-400">Discovering contacts...</div>
           )}
         </div>
       )}

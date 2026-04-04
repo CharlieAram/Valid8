@@ -20,7 +20,7 @@ import type { CallInsight } from "../mock.ts";
 import type { Analytics } from "../components/AnalyticsBar.tsx";
 
 // ---------------------------------------------------------------------------
-// Data extraction helpers — pull structured data from raw task outputs.
+// Data extraction
 // ---------------------------------------------------------------------------
 
 function taskStatus(workflow: WorkflowViewType, type: string): TaskStatus {
@@ -70,7 +70,6 @@ function extractPage(workflow: WorkflowViewType): { url: string | null; html: st
 }
 
 function extractQualitative(workflow: WorkflowViewType, contacts: ContactPipeline[]): QualitativeInsights | null {
-  // Extract structured call insights from voice_call task outputs
   const callInsights: CallInsight[] = [];
   for (const c of contacts) {
     const voiceTask = workflow.tasks.find(
@@ -78,9 +77,6 @@ function extractQualitative(workflow: WorkflowViewType, contacts: ContactPipelin
     );
     if (!voiceTask?.output) continue;
     const out = voiceTask.output as Record<string, unknown>;
-    // If the voice call handler returns structured call data, use it.
-    // Expected shape (from future integration):
-    //   { topProblems, hasProblem, problemValueUsd, whyUnsolved, solutionReaction, willingToTalk }
     if (out.topProblems || out.hasProblem !== undefined) {
       callInsights.push({
         contactName: c.contact.name,
@@ -97,7 +93,6 @@ function extractQualitative(workflow: WorkflowViewType, contacts: ContactPipelin
     }
   }
   if (callInsights.length > 0) return buildQualitativeInsights(callInsights);
-  // MOCK FALLBACK — remove when voice call handler returns structured data
   return MOCK_QUALITATIVE;
 }
 
@@ -116,7 +111,7 @@ function computeAnalytics(contacts: ContactPipeline[]): Analytics {
       paid: 0,
       paidRate: 0,
       confidence: 0,
-      conclusion: "Validation starting — gathering initial data.",
+      conclusion: "Validation starting \u2014 gathering initial data.",
     };
   }
 
@@ -137,15 +132,76 @@ function computeAnalytics(contacts: ContactPipeline[]): Analytics {
     ),
     conclusion:
       paid > 0
-        ? "Promising signals — paying customers found during validation."
+        ? "Promising \u2014 paying customers found during validation."
         : emailsSent > 0
           ? "Outreach in progress. Collecting responses."
-          : "Validation starting — gathering initial data.",
+          : "Validation starting \u2014 gathering initial data.",
   };
 }
 
 // ---------------------------------------------------------------------------
-// Page component
+// Progress steps
+// ---------------------------------------------------------------------------
+
+const STEPS = [
+  { type: "idea_confirmation", label: "Confirm" },
+  { type: "market_research", label: "Research" },
+  { type: "base_landing_page", label: "Page" },
+  { type: "persona_identification", label: "Personas" },
+  { type: "contact_discovery", label: "Contacts" },
+  { type: "send_email", label: "Outreach" },
+  { type: "results_summary", label: "Results" },
+] as const;
+
+function ProgressBar({ workflow }: { workflow: WorkflowViewType }) {
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      {STEPS.map((step, i) => {
+        const status = taskStatus(workflow, step.type);
+        const done = status === "completed" || status === "skipped";
+        const active = status === "running" || status === "ready";
+        const failed = status === "failed";
+
+        return (
+          <div key={step.type} className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              <div
+                className={`w-2 h-2 rounded-full transition-all ${
+                  done
+                    ? "bg-emerald-500"
+                    : active
+                      ? "bg-blue-500 animate-pulse"
+                      : failed
+                        ? "bg-red-500"
+                        : "bg-neutral-200"
+                }`}
+              />
+              <span
+                className={`text-[11px] transition-colors ${
+                  done
+                    ? "text-emerald-600 font-medium"
+                    : active
+                      ? "text-blue-600 font-medium"
+                      : failed
+                        ? "text-red-500"
+                        : "text-neutral-400"
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`w-4 h-px ${done ? "bg-emerald-300" : "bg-neutral-200"}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
 // ---------------------------------------------------------------------------
 
 export default function WorkflowView() {
@@ -272,7 +328,7 @@ export default function WorkflowView() {
 }
 
 // ---------------------------------------------------------------------------
-// Dashboard — the 4-panel layout
+// Dashboard
 // ---------------------------------------------------------------------------
 
 function Dashboard({
@@ -294,11 +350,11 @@ function Dashboard({
   const pageStatus = taskStatus(workflow, "base_landing_page");
 
   return (
-    <div className="h-full flex flex-col p-4 gap-3">
+    <div className="h-full flex flex-col bg-neutral-50">
       {pollError && (
         <div
           role="alert"
-          className="shrink-0 flex items-start justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+          className="shrink-0 flex items-start justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 m-4 mb-0 text-xs text-amber-900"
         >
           <span>
             <span className="font-semibold">Update failed: </span>
@@ -314,11 +370,13 @@ function Dashboard({
           </button>
         </div>
       )}
-      <h1 className="text-lg font-semibold text-gray-900 truncate shrink-0">
-        {workflow.ideaText}
-      </h1>
+      <div className="px-5 py-4 bg-white border-b border-neutral-100 flex items-center justify-between gap-4 shrink-0">
+        <h1 className="text-[15px] font-semibold text-neutral-900 truncate">{workflow.ideaText}</h1>
+        <ProgressBar workflow={workflow} />
+      </div>
 
-      <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-3 min-h-0">
+      {/* Content */}
+      <div className="flex-1 p-4 gap-3 grid grid-cols-2 grid-rows-2 min-h-0">
         <div className="row-span-2 min-h-0">
           <OutreachPanel contacts={contacts} callInsights={qualitative?.callInsights ?? []} />
         </div>
@@ -330,7 +388,10 @@ function Dashboard({
         </div>
       </div>
 
-      <AnalyticsBar analytics={analytics} qualitative={qualitative} />
+      {/* Analytics */}
+      <div className="px-4 pb-4">
+        <AnalyticsBar analytics={analytics} qualitative={qualitative} />
+      </div>
     </div>
   );
 }

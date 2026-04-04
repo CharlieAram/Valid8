@@ -2,11 +2,11 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import type { WorkflowView } from "@valid8/shared";
 import { deleteWorkflow } from "../api.ts";
 
-const STATUS_COLOR: Record<string, string> = {
-  completed: "bg-green-500",
-  failed: "bg-red-500",
-  waiting_for_input: "bg-amber-500",
-  running: "bg-blue-500",
+const STATUS: Record<string, { color: string; label: string }> = {
+  completed: { color: "bg-emerald-500", label: "Done" },
+  failed: { color: "bg-red-500", label: "Failed" },
+  waiting_for_input: { color: "bg-amber-400", label: "Waiting" },
+  running: { color: "bg-blue-500", label: "Running" },
 };
 
 export default function Sidebar({ workflows }: { workflows: WorkflowView[] }) {
@@ -27,50 +27,62 @@ export default function Sidebar({ workflows }: { workflows: WorkflowView[] }) {
   }
 
   return (
-    <aside className="w-56 shrink-0 bg-gray-50 border-r border-gray-200 flex flex-col h-screen">
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        <Link to="/" className="text-sm font-bold text-gray-900 tracking-tight">
-          Valid8
+    <aside className="w-64 shrink-0 bg-neutral-950 flex flex-col h-screen">
+      <div className="px-5 py-5 flex items-center justify-between">
+        <Link to="/" className="text-[15px] font-semibold text-white tracking-tight">
+          Valid<span className="text-emerald-400">8</span>
         </Link>
         <Link
           to="/new"
-          className="w-7 h-7 flex items-center justify-center rounded-md bg-gray-900 text-white text-sm hover:bg-gray-700 transition-colors"
+          className="w-7 h-7 flex items-center justify-center bg-white/10 text-white/70 text-sm hover:bg-white/20 hover:text-white transition-all"
         >
           +
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
-        <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-2 px-2">
-          History
+      <div className="flex-1 overflow-y-auto px-3 pb-3">
+        <div className="text-[10px] font-medium text-neutral-500 uppercase tracking-widest mb-2 px-2">
+          Workflows
         </div>
-        <div className="space-y-0.5">
-          {workflows.map((w) => (
-            <Link
-              key={w.id}
-              to={`/workflow/${w.id}`}
-              className={`block px-3 py-2 rounded-md text-sm truncate transition-colors group ${
-                w.id === id
-                  ? "bg-gray-200 text-gray-900 font-medium"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLOR[w.status] ?? "bg-gray-300"}`}
-                />
-                <span className="flex-1 truncate">{w.ideaText.slice(0, 50)}</span>
-                <button
-                  onClick={(e) => handleDelete(e, w.id)}
-                  className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 text-xs shrink-0"
-                >
-                  &times;
-                </button>
-              </div>
-            </Link>
-          ))}
+        <div className="space-y-px">
+          {workflows.map((w) => {
+            const active = w.id === id;
+            const s = STATUS[w.status];
+            return (
+              <Link
+                key={w.id}
+                to={`/workflow/${w.id}`}
+                className={`block px-3 py-2.5 text-[13px] transition-all group relative ${
+                  active
+                    ? "bg-white/10 text-white"
+                    : "text-neutral-400 hover:bg-white/5 hover:text-neutral-200"
+                }`}
+              >
+                <div className="flex items-start gap-2.5">
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${s?.color ?? "bg-neutral-600"}`}
+                    title={s?.label ?? w.status}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate leading-snug">{w.ideaText.slice(0, 60)}</div>
+                    <div className="text-[10px] text-neutral-600 mt-0.5">
+                      {w.progress.completed}/{w.progress.total} tasks
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => handleDelete(e, w.id)}
+                    className="text-neutral-700 hover:text-red-400 opacity-0 group-hover:opacity-100 text-xs shrink-0 mt-0.5 transition-all"
+                  >
+                    &times;
+                  </button>
+                </div>
+              </Link>
+            );
+          })}
           {workflows.length === 0 && (
-            <div className="text-xs text-gray-400 px-3 py-6 text-center">No workflows yet</div>
+            <div className="text-[11px] text-neutral-600 px-3 py-8 text-center leading-relaxed">
+              No workflows yet.<br />Create one to get started.
+            </div>
           )}
         </div>
       </div>

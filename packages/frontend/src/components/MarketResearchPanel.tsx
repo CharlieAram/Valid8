@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { MarketResearchOutput, TaskStatus } from "@valid8/shared";
 
 interface Props {
@@ -7,68 +8,107 @@ interface Props {
 
 export default function MarketResearchPanel({ research, status }: Props) {
   return (
-    <div className="border border-gray-200 rounded-lg flex flex-col overflow-hidden h-full">
-      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-        <h3 className="text-sm font-semibold text-gray-900">Market Research</h3>
+    <div className="border border-neutral-200 flex flex-col overflow-hidden h-full bg-white">
+      <div className="px-4 py-3 border-b border-neutral-100">
+        <h3 className="text-[13px] font-semibold text-neutral-900">Market research</h3>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         {status === "completed" && research ? (
           <ResearchContent research={research} />
         ) : status === "running" ? (
-          <div className="text-sm text-gray-400 animate-pulse py-8 text-center">
-            Researching market...
-          </div>
+          <Loading>Researching market...</Loading>
         ) : status === "failed" ? (
-          <div className="text-sm text-red-500 py-8 text-center">Research failed</div>
+          <Empty className="text-red-500">Research failed</Empty>
         ) : (
-          <div className="text-sm text-gray-300 py-8 text-center">Waiting to start...</div>
+          <Loading>Waiting to start...</Loading>
         )}
       </div>
     </div>
   );
 }
 
+function Loading({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-[13px] text-neutral-400 animate-pulse">{children}</div>
+    </div>
+  );
+}
+
+function Empty({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`flex items-center justify-center h-full text-[13px] ${className ?? "text-neutral-300"}`}>
+      {children}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 w-full text-left mb-1.5 group"
+      >
+        <span className="text-[10px] text-neutral-400 group-hover:text-neutral-600 transition-colors">
+          {open ? "\u25BE" : "\u25B8"}
+        </span>
+        <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+          {title}
+        </span>
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
 function ResearchContent({ research }: { research: MarketResearchOutput }) {
   return (
-    <div className="space-y-3 text-xs">
-      <p className="text-gray-700 text-sm leading-relaxed">{research.overview}</p>
-      <div className="text-gray-500 font-medium">{research.marketSize}</div>
+    <div className="space-y-4">
+      <p className="text-[13px] text-neutral-700 leading-relaxed">{research.overview}</p>
+
+      <div className="inline-block bg-neutral-50 rounded-lg px-3 py-1.5 text-[12px] font-medium text-neutral-600">
+        {research.marketSize}
+      </div>
 
       {research.competitors.length > 0 && (
-        <div>
-          <div className="font-medium text-gray-500 mb-1">Competitors</div>
-          <div className="space-y-1">
+        <Section title="Competitors">
+          <div className="space-y-2">
             {research.competitors.map((c, i) => (
-              <div key={i} className="flex gap-1.5">
-                <span className="font-medium text-gray-800">{c.name}</span>
-                <span className="text-gray-300">&mdash;</span>
-                <span className="text-gray-500">{c.strengths}</span>
+              <div key={i} className="text-[12px]">
+                <span className="font-medium text-neutral-800">{c.name}</span>
+                <span className="text-neutral-400 mx-1.5">/</span>
+                <span className="text-neutral-500">{c.description}</span>
               </div>
             ))}
           </div>
-        </div>
+        </Section>
       )}
 
       {research.opportunities.length > 0 && (
-        <div>
-          <div className="font-medium text-gray-500 mb-1">Opportunities</div>
-          <ul className="text-gray-600 space-y-0.5 list-disc pl-3">
+        <Section title="Opportunities">
+          <ul className="space-y-1">
             {research.opportunities.map((o, i) => (
-              <li key={i}>{o}</li>
+              <li key={i} className="text-[12px] text-neutral-600 leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-[7px] before:w-1 before:h-1 before:rounded-full before:bg-emerald-400">
+                {o}
+              </li>
             ))}
           </ul>
-        </div>
+        </Section>
       )}
 
       {research.risks.length > 0 && (
-        <div>
-          <div className="font-medium text-gray-500 mb-1">Risks</div>
-          <ul className="text-gray-600 space-y-0.5 list-disc pl-3">
+        <Section title="Risks">
+          <ul className="space-y-1">
             {research.risks.map((r, i) => (
-              <li key={i}>{r}</li>
+              <li key={i} className="text-[12px] text-neutral-600 leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-[7px] before:w-1 before:h-1 before:rounded-full before:bg-red-400">
+                {r}
+              </li>
             ))}
           </ul>
-        </div>
+        </Section>
       )}
     </div>
   );
