@@ -10,8 +10,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.2.0",
-    "@ai-sdk/openai": "^3.0.50",
+    "@ai-sdk/anthropic": "^3.0.66",
     "@hono/node-server": "^1.14.0",
     "@valid8/shared": "workspace:*",
     "ai": "^6.0.146",

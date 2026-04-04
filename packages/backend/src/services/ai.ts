@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import type {
   IdeaConfirmationOutput,
@@ -9,20 +9,17 @@ import type {
   ResultsSummaryOutput,
 } from "@valid8/shared";
 
-const openrouter = createOpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const model = openrouter(process.env.AI_MODEL ?? "anthropic/claude-sonnet-4");
-const objectMode = "json" as const;
+const model = anthropic(process.env.AI_MODEL ?? "claude-sonnet-4-20250514");
 
 export async function generateIdeaConfirmation(
   ideaText: string
 ): Promise<IdeaConfirmationOutput> {
   const { object } = await generateObject({
     model,
-    mode: objectMode,
     schema: z.object({
       summary: z.string().describe("A clear 2-3 sentence summary of the business idea"),
       targetMarket: z.string().describe("Who this is for"),
@@ -39,10 +36,8 @@ Idea: ${ideaText}`,
 export async function generateMarketResearch(
   idea: string
 ): Promise<MarketResearchOutput> {
-  // TODO: integrate web search for real market data
   const { object } = await generateObject({
     model,
-    mode: objectMode,
     schema: z.object({
       overview: z.string(),
       marketSize: z.string(),
@@ -71,7 +66,6 @@ export async function generateAssumptions(
 ): Promise<AssumptionOutput> {
   const { object } = await generateObject({
     model,
-    mode: objectMode,
     schema: z.object({
       assumptions: z.array(
         z.object({
@@ -98,7 +92,6 @@ export async function generatePersonas(
 ): Promise<PersonaOutput> {
   const { object } = await generateObject({
     model,
-    mode: objectMode,
     schema: z.object({
       personas: z.array(
         z.object({
@@ -127,7 +120,6 @@ export async function generateResultsSummary(
 ): Promise<ResultsSummaryOutput> {
   const { object } = await generateObject({
     model,
-    mode: objectMode,
     schema: z.object({
       verdict: z.enum(["validated", "invalidated", "inconclusive"]),
       confidence: z.number().min(0).max(100),

@@ -30,7 +30,7 @@ The workflow concludes with a direct summary of results, combining quantitative 
 
 - **Backend**: TypeScript, Hono, SQLite (via Drizzle ORM)
 - **Frontend**: React, Tailwind CSS, Vite
-- **AI orchestration**: Vercel AI SDK
+- **AI**: Anthropic Claude (via Vercel AI SDK + @ai-sdk/anthropic)
 - **Email**: Agentsmail
 - **Voice**: ElevenLabs
 - **Landing pages**: Insforge
