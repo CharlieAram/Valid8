@@ -1,4 +1,4 @@
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import type {
@@ -112,6 +112,47 @@ Assumptions to validate:
 ${JSON.stringify(assumptions.assumptions, null, 2)}`,
   });
   return object;
+}
+
+export async function generateLandingPageHTML(
+  idea: IdeaConfirmationOutput,
+): Promise<string> {
+  const { text } = await generateText({
+    model,
+    system: `You are an expert B2B SaaS landing page designer. Output a complete, self-contained HTML file.
+
+Rules:
+- Output ONLY raw HTML starting with <!DOCTYPE html>. No markdown, no code fences, no commentary.
+- Use <script src="https://cdn.tailwindcss.com"></script> for styling.
+- Professional, modern B2B SaaS design: clean typography, ample whitespace, polished feel.
+- Fully responsive — must look great on mobile and desktop.
+- Include proper <head> with charset, viewport meta, title, and description meta tag.
+- Use a cohesive blue/indigo primary color palette with neutral grays.
+- Sections:
+  1. Navbar with product name and "Get Started" anchor link
+  2. Hero: bold benefit-focused headline, subheadline, primary CTA button
+  3. Problem: 2-3 pain points the target market faces
+  4. Solution: how the product solves them, with 3 feature cards (use inline SVG icons)
+  5. Social proof: trust indicators like "Trusted by 100+ teams" and metric highlights
+  6. Final CTA with email capture form (input + submit button, action="#" method="POST")
+  7. Simple footer
+- Add subtle hover states and transitions.
+- Make the page feel like a real, launched product — not a template or wireframe.`,
+    prompt: `Create a landing page for this B2B product:
+
+Product: ${idea.summary}
+Target market: ${idea.targetMarket}
+Value proposition: ${idea.valueProposition}
+Revenue model: ${idea.revenueModel}
+
+Make the headline punchy and benefit-focused. Speak directly to the target market's pain points.`,
+  });
+
+  let html = text.trim();
+  if (html.startsWith("```")) {
+    html = html.replace(/^```\w*\n?/, "").replace(/\n?```$/, "");
+  }
+  return html;
 }
 
 export async function generateResultsSummary(

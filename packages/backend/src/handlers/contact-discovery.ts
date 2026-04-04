@@ -34,7 +34,6 @@ export const contactDiscoveryHandler: TaskHandler<PersonaOutput, ContactOutput> 
       });
 
       const scope = { contactId };
-      ctx.spawn("personalize_page", scope);
       ctx.spawn("send_email", scope);
       ctx.spawn("voice_call", scope);
       ctx.spawn("schedule_human_call", scope);

@@ -15,10 +15,10 @@ interface Output {
 
 export const sendEmailHandler: TaskHandler<Input, Output> = {
   type: "send_email",
-  dependencies: [{ kind: "afterScoped", taskType: "personalize_page" }],
+  dependencies: [{ kind: "after", taskType: "base_landing_page" }],
   resolveInput: (ctx) => {
     const contact = ctx.requireScopedContact() as ContactOutput["contacts"][number];
-    const page = ctx.getTaskOutput("personalize_page", ctx.scope ?? undefined) as { url: string };
+    const page = ctx.getTaskOutput("base_landing_page") as { url: string };
     const idea = ctx.getTaskOutput("idea_confirmation") as IdeaConfirmationOutput;
     return { contact, pageUrl: page.url, idea };
   },
