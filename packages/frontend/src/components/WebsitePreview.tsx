@@ -54,7 +54,7 @@ export default function WebsitePreview({ url, html, status }: Props) {
             onClick={handlePopout}
             className="text-[11px] text-neutral-500 hover:text-neutral-800 transition-colors"
           >
-            Open &nearr;
+            Open in new tab
           </button>
         )}
       </div>
