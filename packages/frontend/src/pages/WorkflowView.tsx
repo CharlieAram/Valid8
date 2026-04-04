@@ -13,7 +13,9 @@ import OutreachPanel from "../components/OutreachPanel.tsx";
 import WebsitePreview from "../components/WebsitePreview.tsx";
 import MarketResearchPanel from "../components/MarketResearchPanel.tsx";
 import AnalyticsBar from "../components/AnalyticsBar.tsx";
-import type { ContactPipeline } from "../mock.ts";
+import type { ContactPipeline, QualitativeInsights } from "../mock.ts";
+import { MOCK_QUALITATIVE, buildQualitativeInsights } from "../mock.ts";
+import type { CallInsight } from "../mock.ts";
 import type { Analytics } from "../components/AnalyticsBar.tsx";
 
 // ---------------------------------------------------------------------------
@@ -64,6 +66,38 @@ function extractPage(workflow: WorkflowViewType): { url: string | null; html: st
   if (!task?.output) return { url: null, html: null };
   const output = task.output as { url?: string; html?: string };
   return { url: output.url ?? null, html: output.html ?? null };
+}
+
+function extractQualitative(workflow: WorkflowViewType, contacts: ContactPipeline[]): QualitativeInsights | null {
+  // Extract structured call insights from voice_call task outputs
+  const callInsights: CallInsight[] = [];
+  for (const c of contacts) {
+    const voiceTask = workflow.tasks.find(
+      (t) => t.type === "voice_call" && t.scope?.contactId === c.contact.id && t.status === "completed",
+    );
+    if (!voiceTask?.output) continue;
+    const out = voiceTask.output as Record<string, unknown>;
+    // If the voice call handler returns structured call data, use it.
+    // Expected shape (from future integration):
+    //   { topProblems, hasProblem, problemValueUsd, whyUnsolved, solutionReaction, willingToTalk }
+    if (out.topProblems || out.hasProblem !== undefined) {
+      callInsights.push({
+        contactName: c.contact.name,
+        topProblems: (out.topProblems as string[]) ?? [],
+        hasProblem: (out.hasProblem as boolean) ?? false,
+        problemValueUsd: (out.problemValueUsd as number) ?? null,
+        whyUnsolved: (out.whyUnsolved as string) ?? "",
+        solutionReaction: (out.solutionReaction as { positive: boolean; comment: string }) ?? {
+          positive: false,
+          comment: "",
+        },
+        willingToTalk: (out.willingToTalk as boolean) ?? false,
+      });
+    }
+  }
+  if (callInsights.length > 0) return buildQualitativeInsights(callInsights);
+  // MOCK FALLBACK — remove when voice call handler returns structured data
+  return MOCK_QUALITATIVE;
 }
 
 function computeAnalytics(contacts: ContactPipeline[]): Analytics {
@@ -197,6 +231,7 @@ function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
   const research = extractResearch(workflow);
   const { url: pageUrl, html: pageHtml } = extractPage(workflow);
   const analytics = useMemo(() => computeAnalytics(contacts), [contacts]);
+  const qualitative = useMemo(() => extractQualitative(workflow, contacts), [workflow, contacts]);
 
   const researchStatus = taskStatus(workflow, "market_research");
   const pageStatus = taskStatus(workflow, "base_landing_page");
@@ -219,7 +254,7 @@ function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
         </div>
       </div>
 
-      <AnalyticsBar analytics={analytics} />
+      <AnalyticsBar analytics={analytics} qualitative={qualitative} />
     </div>
   );
 }
