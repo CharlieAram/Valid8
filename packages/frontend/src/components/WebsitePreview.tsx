@@ -6,8 +6,16 @@ interface Props {
   status: TaskStatus;
 }
 
+/** Fix legacy bad URLs where `/` was prefixed before `https://` (browser treated them as same-origin paths). */
+function normalizePageUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("/http://") || url.startsWith("/https://")) return url.slice(1);
+  return url;
+}
+
 function isHostedUrl(url: string | null): boolean {
-  return !!url && url.startsWith("http") && !url.includes("placeholder");
+  const u = normalizePageUrl(url);
+  return !!u && u.startsWith("http") && !u.includes("placeholder");
 }
 
 function openHtmlInNewTab(html: string): void {
@@ -19,12 +27,13 @@ function openHtmlInNewTab(html: string): void {
 }
 
 export default function WebsitePreview({ url, html, status }: Props) {
+  const pageUrl = normalizePageUrl(url);
   const hosted = isHostedUrl(url);
   const hasPreview = hosted || !!html;
 
   function handlePopout() {
-    if (hosted && url) {
-      window.open(url, "_blank", "noopener,noreferrer");
+    if (hosted && pageUrl) {
+      window.open(pageUrl, "_blank", "noopener,noreferrer");
     } else if (html) {
       openHtmlInNewTab(html);
     }
@@ -60,7 +69,7 @@ export default function WebsitePreview({ url, html, status }: Props) {
       <div className="flex-1 bg-gray-50 flex items-center justify-center min-h-0">
         {hosted ? (
           <iframe
-            src={url!}
+            src={pageUrl!}
             title="Landing page"
             className="w-full h-full border-0"
             sandbox="allow-scripts allow-same-origin"

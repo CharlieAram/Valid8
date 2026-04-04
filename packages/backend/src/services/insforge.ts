@@ -9,21 +9,28 @@
 //
 // Docs: https://docs.insforge.dev/sdks/rest/storage
 
-const INSFORGE_URL = process.env.INSFORGE_URL;
+const INSFORGE_URL_RAW = process.env.INSFORGE_URL;
 const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY;
 const BUCKET = "landing-pages";
 
+/** Base URL with no trailing slash — avoids `//api/...` when env has a trailing `/`. */
+function baseUrl(): string {
+  return (INSFORGE_URL_RAW ?? "").replace(/\/+$/, "");
+}
+
 export function isConfigured(): boolean {
-  return !!(INSFORGE_URL && INSFORGE_API_KEY);
+  return !!(INSFORGE_URL_RAW?.trim() && INSFORGE_API_KEY);
 }
 
 let bucketReady = false;
 
 async function request(path: string, init: RequestInit = {}): Promise<Response> {
-  if (!INSFORGE_URL || !INSFORGE_API_KEY) {
+  const origin = baseUrl();
+  if (!origin || !INSFORGE_API_KEY) {
     throw new Error("InsForge not configured — set INSFORGE_URL and INSFORGE_API_KEY");
   }
-  return fetch(`${INSFORGE_URL}${path}`, {
+  const pathPart = path.startsWith("/") ? path : `/${path}`;
+  return fetch(`${origin}${pathPart}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${INSFORGE_API_KEY}`,
@@ -71,5 +78,14 @@ export async function uploadPage(workflowId: string, html: string): Promise<Uplo
   }
 
   const data = (await res.json()) as { url: string; key?: string };
-  return { url: `${INSFORGE_URL}${data.url}`, key: data.key ?? key };
+  const raw = data.url.trim();
+  // API may return a path (/api/...) or a full URL — never prefix "/" before "https://" or we break links.
+  let publicUrl: string;
+  if (/^https?:\/\//i.test(raw)) {
+    publicUrl = raw;
+  } else {
+    const path = raw.startsWith("/") ? raw : `/${raw}`;
+    publicUrl = `${baseUrl()}${path}`;
+  }
+  return { url: publicUrl, key: data.key ?? key };
 }
