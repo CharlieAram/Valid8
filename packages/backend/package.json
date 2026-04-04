@@ -1,0 +1,31 @@
+{
+  "name": "@valid8/backend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
+    "build": "tsc",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.2.0",
+    "@ai-sdk/openai": "^3.0.50",
+    "@hono/node-server": "^1.14.0",
+    "@valid8/shared": "workspace:*",
+    "ai": "^6.0.146",
+    "better-sqlite3": "^11.8.0",
+    "drizzle-orm": "^0.38.0",
+    "hono": "^4.7.0",
+    "nanoid": "^5.1.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0"
+  }
+}
