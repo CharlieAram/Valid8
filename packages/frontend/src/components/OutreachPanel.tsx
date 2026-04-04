@@ -44,7 +44,7 @@ function Initials({ name }: { name: string }) {
     .join("")
     .slice(0, 2);
   return (
-    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[11px] font-medium text-gray-600 shrink-0">
+    <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-[11px] font-medium text-neutral-500 shrink-0">
       {s}
     </div>
   );
@@ -52,7 +52,7 @@ function Initials({ name }: { name: string }) {
 
 function ListIcon({ active }: { active: boolean }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={active ? "text-gray-900" : "text-gray-400"}>
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={active ? "text-neutral-900" : "text-neutral-400"}>
       <rect x="1" y="2" width="12" height="1.5" rx="0.5" fill="currentColor" />
       <rect x="1" y="6.25" width="12" height="1.5" rx="0.5" fill="currentColor" />
       <rect x="1" y="10.5" width="12" height="1.5" rx="0.5" fill="currentColor" />
@@ -62,7 +62,7 @@ function ListIcon({ active }: { active: boolean }) {
 
 function GraphIcon({ active }: { active: boolean }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={active ? "text-gray-900" : "text-gray-400"}>
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className={active ? "text-neutral-900" : "text-neutral-400"}>
       <circle cx="3" cy="10" r="1.5" fill="currentColor" />
       <circle cx="5.5" cy="5" r="1.5" fill="currentColor" />
       <circle cx="9" cy="8" r="1.5" fill="currentColor" />
@@ -81,16 +81,16 @@ export default function OutreachPanel({
   const [view, setView] = useState<"list" | "graph">("list");
 
   return (
-    <div className="border border-gray-200 rounded-lg flex flex-col overflow-hidden h-full">
-      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">Outreach</h3>
+    <div className="border border-neutral-200 flex flex-col overflow-hidden h-full bg-white">
+      <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
+        <h3 className="text-[13px] font-semibold text-neutral-900">Outreach</h3>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">{contacts.length} contacts</span>
-          <div className="flex border border-gray-200 rounded-md overflow-hidden">
+          <span className="text-[11px] text-neutral-400">{contacts.length} contacts</span>
+          <div className="flex border border-neutral-200 overflow-hidden">
             <button
               type="button"
               onClick={() => setView("list")}
-              className={`px-1.5 py-1 cursor-pointer ${view === "list" ? "bg-white" : "bg-gray-50 hover:bg-gray-100"}`}
+              className={`px-1.5 py-1 cursor-pointer ${view === "list" ? "bg-white" : "bg-neutral-50 hover:bg-neutral-100"}`}
               title="List view"
             >
               <ListIcon active={view === "list"} />
@@ -98,7 +98,7 @@ export default function OutreachPanel({
             <button
               type="button"
               onClick={() => setView("graph")}
-              className={`px-1.5 py-1 cursor-pointer border-l border-gray-200 ${view === "graph" ? "bg-white" : "bg-gray-50 hover:bg-gray-100"}`}
+              className={`px-1.5 py-1 cursor-pointer border-l border-neutral-200 ${view === "graph" ? "bg-white" : "bg-neutral-50 hover:bg-neutral-100"}`}
               title="Graph view"
             >
               <GraphIcon active={view === "graph"} />
@@ -108,41 +108,36 @@ export default function OutreachPanel({
       </div>
 
       {view === "list" ? (
-        <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+        <div className="flex-1 overflow-y-auto divide-y divide-neutral-100">
           {contacts.map((c) => (
             <div key={c.contact.id} className="px-4 py-3 flex items-center gap-3">
               <Initials name={c.contact.name} />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">{c.contact.name}</div>
-                <div className="text-xs text-gray-500 truncate">
+                <div className="text-[13px] font-medium text-neutral-900 truncate">{c.contact.name}</div>
+                <div className="text-[11px] text-neutral-500 truncate">
                   {c.contact.role}
-                  <span className="text-gray-400"> · {c.contact.company}</span>
+                  <span className="text-neutral-400"> · {c.contact.company}</span>
                 </div>
-                <LinkedInLink contact={c.contact} />
-                <a
-                  href={`/call/${c.contact.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-0.5 text-xs text-indigo-500 hover:text-indigo-400 hover:underline"
-                >
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"
-                    />
-                  </svg>
-                  AI interview
-                </a>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <LinkedInLink contact={c.contact} />
+                  <a
+                    href={`/call/${c.contact.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-neutral-500 hover:text-neutral-800 underline"
+                  >
+                    AI interview
+                  </a>
+                </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <StatusDot status={c.email} label="Email" />
-                <span className="text-gray-300 text-[10px]">&rarr;</span>
+                <span className="text-neutral-300 text-[10px]">&rarr;</span>
                 <StatusDot status={c.phone} label="Phone" />
-                <span className="text-gray-300 text-[10px]">&rarr;</span>
+                <span className="text-neutral-300 text-[10px]">&rarr;</span>
                 {c.paid ? (
-                  <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                    Paid!
+                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5">
+                    Paid
                   </span>
                 ) : (
                   <StatusDot status="pending" label="Paid" />
@@ -151,7 +146,7 @@ export default function OutreachPanel({
             </div>
           ))}
           {contacts.length === 0 && (
-            <div className="px-4 py-12 text-center text-xs text-gray-400">Discovering contacts...</div>
+            <div className="px-4 py-12 text-center text-[11px] text-neutral-400">Discovering contacts...</div>
           )}
         </div>
       ) : (
@@ -159,7 +154,7 @@ export default function OutreachPanel({
           {contacts.length > 0 ? (
             <ContactGraph contacts={contacts} callInsights={callInsights} />
           ) : (
-            <div className="flex items-center justify-center h-full text-xs text-gray-400">Discovering contacts...</div>
+            <div className="flex items-center justify-center h-full text-[11px] text-neutral-400">Discovering contacts...</div>
           )}
         </div>
       )}
