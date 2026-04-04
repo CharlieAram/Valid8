@@ -13,8 +13,7 @@ const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Type assertion needed: @ai-sdk/anthropic exports LanguageModelV1 but ai SDK expects V2+
-const model: any = anthropic(process.env.AI_MODEL ?? "claude-sonnet-4-20250514");
+const model = anthropic(process.env.AI_MODEL ?? "claude-sonnet-4-20250514");
 
 export async function generateIdeaConfirmation(
   ideaText: string
