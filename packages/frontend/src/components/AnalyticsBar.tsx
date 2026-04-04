@@ -34,7 +34,7 @@ export default function AnalyticsBar({ analytics, qualitative }: Props) {
   const hasCalls = q && q.callInsights.length > 0;
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white shrink-0 transition-all">
+    <div className="border border-neutral-200 bg-white shrink-0 transition-all">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -156,7 +156,7 @@ export default function AnalyticsBar({ analytics, qualitative }: Props) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-neutral-100 p-3.5 bg-neutral-50/50">
+    <div className="border border-neutral-100 p-3.5 bg-neutral-50/50">
       <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-wider mb-2">{title}</div>
       {children}
     </div>
@@ -179,9 +179,9 @@ function RateBar({ label, pct }: { label: string; pct: number }) {
         <span className="text-neutral-600">{label}</span>
         <span className="font-medium text-neutral-900 tabular-nums">{pct}%</span>
       </div>
-      <div className="h-1 bg-neutral-100 rounded-full overflow-hidden">
+      <div className="h-1 bg-neutral-100 overflow-hidden">
         <div
-          className="h-full rounded-full bg-neutral-900 transition-all"
+          className="h-full bg-neutral-900 transition-all"
           style={{ width: `${Math.min(pct, 100)}%` }}
         />
       </div>
@@ -191,7 +191,7 @@ function RateBar({ label, pct }: { label: string; pct: number }) {
 
 function CallCard({ insight }: { insight: CallInsight }) {
   return (
-    <div className="rounded-lg border border-neutral-100 p-3 text-[11px] space-y-1.5 bg-white">
+    <div className="border border-neutral-100 p-3 text-[11px] space-y-1.5 bg-white">
       <div className="flex items-center justify-between">
         <span className="font-medium text-neutral-900">{insight.contactName}</span>
         <div className="flex gap-1">
@@ -213,7 +213,7 @@ function CallCard({ insight }: { insight: CallInsight }) {
 
 function Pill({ positive, children }: { positive: boolean; children: React.ReactNode }) {
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+    <span className={`px-1.5 py-0.5 text-[9px] font-medium ${
       positive ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"
     }`}>
       {children}

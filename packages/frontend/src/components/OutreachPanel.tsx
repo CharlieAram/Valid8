@@ -37,7 +37,7 @@ function LinkedInLink({ contact }: { contact: ContactOutput["contacts"][number] 
 
 export default function OutreachPanel({ contacts }: { contacts: ContactPipeline[] }) {
   return (
-    <div className="rounded-xl border border-neutral-200 flex flex-col overflow-hidden h-full bg-white">
+    <div className="border border-neutral-200 flex flex-col overflow-hidden h-full bg-white">
       <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
         <h3 className="text-[13px] font-semibold text-neutral-900">Outreach pipeline</h3>
         <span className="text-[11px] text-neutral-400 tabular-nums">{contacts.length}</span>
@@ -66,7 +66,7 @@ export default function OutreachPanel({ contacts }: { contacts: ContactPipeline[
               <StatusDot status={c.email} label="Email" />
               <StatusDot status={c.phone} label="Call" />
               {c.paid && (
-                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5">
                   Paid
                 </span>
               )}

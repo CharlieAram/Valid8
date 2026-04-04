@@ -33,7 +33,7 @@ export default function Sidebar({ workflows }: { workflows: WorkflowView[] }) {
         </Link>
         <Link
           to="/new"
-          className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 text-white/70 text-sm hover:bg-white/20 hover:text-white transition-all"
+          className="w-7 h-7 flex items-center justify-center bg-white/10 text-white/70 text-sm hover:bg-white/20 hover:text-white transition-all"
         >
           +
         </Link>
@@ -51,7 +51,7 @@ export default function Sidebar({ workflows }: { workflows: WorkflowView[] }) {
               <Link
                 key={w.id}
                 to={`/workflow/${w.id}`}
-                className={`block px-3 py-2.5 rounded-lg text-[13px] transition-all group relative ${
+                className={`block px-3 py-2.5 text-[13px] transition-all group relative ${
                   active
                     ? "bg-white/10 text-white"
                     : "text-neutral-400 hover:bg-white/5 hover:text-neutral-200"

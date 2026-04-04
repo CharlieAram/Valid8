@@ -39,12 +39,12 @@ export default function NewWorkflow() {
             onChange={(e) => setIdea(e.target.value)}
             placeholder="e.g. AI-powered safety cameras for construction sites that detect hazards in real-time and alert supervisors..."
             rows={5}
-            className="w-full border border-neutral-200 rounded-xl px-4 py-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 resize-y bg-white transition-all"
+            className="w-full border border-neutral-200 px-4 py-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 resize-y bg-white transition-all"
             disabled={submitting}
             autoFocus
           />
           {error && (
-            <div className="mt-2.5 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+            <div className="mt-2.5 text-sm text-red-600 bg-red-50 px-3 py-2">
               {error}
             </div>
           )}
@@ -52,7 +52,7 @@ export default function NewWorkflow() {
             <button
               type="submit"
               disabled={!idea.trim() || submitting}
-              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
               {submitting ? "Analyzing..." : "Start validation"}
             </button>

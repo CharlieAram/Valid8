@@ -34,7 +34,7 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
           <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-2">
             Your input
           </div>
-          <div className="rounded-xl bg-white border border-neutral-200 px-4 py-3 text-sm text-neutral-600 leading-relaxed">
+          <div className="bg-white border border-neutral-200 px-4 py-3 text-sm text-neutral-600 leading-relaxed">
             {ideaText}
           </div>
         </div>
@@ -43,7 +43,7 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
           <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-2">
             Our understanding
           </div>
-          <div className="rounded-xl bg-white border border-neutral-200 p-5">
+          <div className="bg-white border border-neutral-200 p-5">
             <p className="text-[15px] text-neutral-900 leading-relaxed mb-5">
               {confirmation.summary}
             </p>
@@ -71,14 +71,14 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
               onChange={(e) => setRevised(e.target.value)}
               placeholder="Rewrite or clarify your idea..."
               rows={4}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-3.5 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 resize-y bg-white transition-all"
+              className="w-full border border-neutral-200 px-4 py-3.5 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 resize-y bg-white transition-all"
               autoFocus
             />
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleRevise}
                 disabled={!revised.trim() || busy}
-                className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-30 transition-all"
+                className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-800 disabled:opacity-30 transition-all"
               >
                 Re-analyze
               </button>
@@ -95,13 +95,13 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
             <button
               onClick={handleConfirm}
               disabled={busy}
-              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-30 transition-all"
+              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-800 disabled:opacity-30 transition-all"
             >
               {busy ? "Starting..." : "Looks right, start"}
             </button>
             <button
               onClick={() => setEditing(true)}
-              className="px-6 py-2.5 border border-neutral-200 text-neutral-700 text-sm font-medium rounded-xl hover:bg-neutral-50 transition-all"
+              className="px-6 py-2.5 border border-neutral-200 text-neutral-700 text-sm font-medium hover:bg-neutral-50 transition-all"
             >
               Not quite, let me clarify
             </button>

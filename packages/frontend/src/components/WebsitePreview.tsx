@@ -38,7 +38,7 @@ export default function WebsitePreview({ url, html, status }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-neutral-200 flex flex-col overflow-hidden h-full bg-white">
+    <div className="border border-neutral-200 flex flex-col overflow-hidden h-full bg-white">
       <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
         <div className="min-w-0">
           <h3 className="text-[13px] font-semibold text-neutral-900">Landing page</h3>
