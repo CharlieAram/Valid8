@@ -2,7 +2,7 @@
   "name": "valid8",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter backend dev & pnpm --filter frontend dev",
+    "dev": "pnpm --filter backend dev & sleep 2 && pnpm --filter frontend dev",
     "build": "pnpm --filter shared build && pnpm --filter backend build && pnpm --filter frontend build",
     "db:push": "pnpm --filter backend db:push",
     "db:studio": "pnpm --filter backend db:studio"

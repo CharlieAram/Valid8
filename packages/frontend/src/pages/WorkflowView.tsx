@@ -65,11 +65,13 @@ function extractResearch(workflow: WorkflowViewType): MarketResearchOutput | nul
   return task?.output ? (task.output as MarketResearchOutput) : null;
 }
 
-function extractPageUrl(workflow: WorkflowViewType): string | null {
+function extractPage(workflow: WorkflowViewType): { url: string | null; html: string | null } {
   const task = workflow.tasks.find(
     (t) => t.type === "base_landing_page" && t.status === "completed",
   );
-  return task?.output ? (task.output as { url: string }).url : null;
+  if (!task?.output) return { url: null, html: null };
+  const output = task.output as { url?: string; html?: string };
+  return { url: output.url ?? null, html: output.html ?? null };
 }
 
 function computeAnalytics(contacts: ContactPipeline[]): Analytics {
@@ -190,7 +192,7 @@ export default function WorkflowView() {
 function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
   const contacts = useMemo(() => extractContacts(workflow), [workflow]);
   const research = extractResearch(workflow);
-  const pageUrl = extractPageUrl(workflow);
+  const { url: pageUrl, html: pageHtml } = extractPage(workflow);
   const analytics = useMemo(() => computeAnalytics(contacts), [contacts]);
 
   const researchStatus = taskStatus(workflow, "market_research");
@@ -199,8 +201,9 @@ function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
   // Use real data when available, mock data as fallback
   const displayResearch = research ?? MOCK_RESEARCH; // MOCK FALLBACK
   const displayResearchStatus = research ? ("completed" as const) : researchStatus;
-  const displayPageUrl = pageUrl ?? MOCK_PAGE_URL; // MOCK FALLBACK
-  const displayPageStatus = pageUrl ? ("completed" as const) : pageStatus;
+  const displayPageUrl = pageUrl ?? (pageHtml ? null : MOCK_PAGE_URL); // MOCK FALLBACK only if no HTML
+  const displayPageHtml = pageHtml ?? null;
+  const displayPageStatus = pageUrl || pageHtml ? ("completed" as const) : pageStatus;
   const displayContacts = contacts.length > 0 ? contacts : getMockContacts(); // MOCK FALLBACK
   const displayAnalytics = contacts.length > 0 ? analytics : MOCK_ANALYTICS; // MOCK FALLBACK
 
@@ -215,7 +218,7 @@ function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
           <OutreachPanel contacts={displayContacts} />
         </div>
         <div className="min-h-0">
-          <WebsitePreview url={displayPageUrl} status={displayPageStatus} />
+          <WebsitePreview url={displayPageUrl} html={displayPageHtml} status={displayPageStatus} />
         </div>
         <div className="min-h-0">
           <MarketResearchPanel research={displayResearch} status={displayResearchStatus} />

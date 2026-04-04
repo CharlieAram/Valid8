@@ -10,7 +10,6 @@ export const contactDiscoveryHandler: TaskHandler<PersonaOutput, ContactOutput> 
   },
   execute: async (input, ctx) => {
     // TODO: Real contact discovery via LinkedIn, Apollo, etc.
-    // For now, generate placeholder contacts from personas
     const contacts: ContactOutput["contacts"] = [];
 
     for (const persona of input.personas) {
@@ -24,9 +23,7 @@ export const contactDiscoveryHandler: TaskHandler<PersonaOutput, ContactOutput> 
         personaId: persona.id,
       });
 
-      // Spawn per-contact outreach tasks
       const scope = { contactId };
-      ctx.spawn("personalize_page", scope);
       ctx.spawn("send_email", scope);
       ctx.spawn("voice_call", scope);
       ctx.spawn("schedule_human_call", scope);
