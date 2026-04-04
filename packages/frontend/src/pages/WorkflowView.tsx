@@ -258,13 +258,27 @@ export default function WorkflowView() {
   }, [id]);
 
   useEffect(() => {
-    if (workflow && (workflow.status === "completed" || workflow.status === "failed")) {
+    const s = workflow?.status;
+    if (s === "completed" || s === "failed" || s === "waiting_for_input") {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+    } else if (s === "running" && !intervalRef.current && id) {
+      intervalRef.current = setInterval(() => {
+        getWorkflow(id)
+          .then((w) => {
+            setWorkflow(w);
+            setPollError(null);
+          })
+          .catch((e: unknown) => {
+            const message = e instanceof Error ? e.message : String(e);
+            console.error("[Valid8] workflow poll failed", e);
+            setPollError(message);
+          });
+      }, 3000);
     }
-  }, [workflow?.status]);
+  }, [workflow?.status, id]);
 
   if (loading) {
     return (

@@ -11,20 +11,23 @@ export const marketResearchHandler: TaskHandler<string, MarketResearchOutput> = 
     return confirmation.summary;
   },
   execute: async (idea) => {
-    // Run multiple Tavily searches in parallel to gather real market data
-    const searches = await Promise.allSettled([
-      tavilySearch(`${idea} market size TAM industry report`, { maxResults: 5, includeAnswer: true }),
-      tavilySearch(`${idea} competitors landscape alternatives`, { maxResults: 5, includeAnswer: true }),
-      tavilySearch(`${idea} industry trends challenges risks 2024 2025`, { maxResults: 5, includeAnswer: true }),
-    ]);
+    const year = new Date().getFullYear();
+    const queries = [
+      { label: "Market Size & Industry", query: `${idea} market size TAM industry report` },
+      { label: "Competitors & Landscape", query: `${idea} competitors landscape alternatives` },
+      { label: "Trends & Risks", query: `${idea} industry trends challenges risks ${year - 1} ${year}` },
+    ];
+
+    const searches = await Promise.allSettled(
+      queries.map((q) => tavilySearch(q.query, { maxResults: 5, includeAnswer: true }))
+    );
 
     const webContext = searches
       .map((r, i) => {
         if (r.status !== "fulfilled") return "";
-        const label = ["Market Size & Industry", "Competitors & Landscape", "Trends & Risks"][i];
         const { answer, results } = r.value;
         const snippets = results.map((s) => `- [${s.title}](${s.url}): ${s.content.slice(0, 300)}`).join("\n");
-        return `## ${label}\n${answer ? `Summary: ${answer}\n` : ""}${snippets}`;
+        return `## ${queries[i].label}\n${answer ? `Summary: ${answer}\n` : ""}${snippets}`;
       })
       .filter(Boolean)
       .join("\n\n");

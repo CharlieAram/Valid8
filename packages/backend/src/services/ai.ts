@@ -62,7 +62,7 @@ export async function generateMarketResearch(
       opportunities: z.array(z.string()),
       risks: z.array(z.string()),
     }),
-    prompt: `Conduct deep market research for this B2B software idea. Identify real competitors, market trends, opportunities, and risks. Be specific with names and data. Ground your analysis in the web research provided below — cite real companies, real numbers, and real trends.
+    prompt: `Conduct deep market research for this B2B software idea. Identify real competitors, market trends, opportunities, and risks. Be specific with names and data.${webContext ? " Ground your analysis in the web research provided below — cite real companies, real numbers, and real trends." : ""}
 
 Idea: ${idea}${webContext ? `\n\nWeb Research:\n${webContext}` : ""}`,
   });
@@ -369,9 +369,9 @@ Original idea: ${idea}
 
 Validation verdict: ${results.verdict} (${results.confidence}% confidence)
 Recommendation: ${results.recommendation}
-Key insights: ${results.qualitative.keyInsights.join("; ")}
-Common objections: ${results.qualitative.commonObjections.join("; ")}
-Positive signals: ${results.qualitative.positiveSignals.join("; ")}
+Key insights: ${results.qualitative.keyInsights.join("; ") || "None yet"}
+Common objections: ${results.qualitative.commonObjections.join("; ") || "None yet"}
+Positive signals: ${results.qualitative.positiveSignals.join("; ") || "None yet"}
 ${results.pivotSuggestions?.length ? `Initial pivot hints: ${results.pivotSuggestions.join("; ")}` : ""}
 
 Market context:

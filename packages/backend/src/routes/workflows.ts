@@ -36,14 +36,12 @@ function deriveStatus(tasks: TaskView[]): WorkflowView["status"] {
     t.status === "running" || t.status === "ready" || t.status === "pending"
   );
   if (hasActive) return "running";
-  // If pivot_proposals completed (or results_summary completed with no pivot task), the workflow is done
   const pivotDone = tasks.some((t) => t.type === "pivot_proposals" && t.status === "completed");
   const resultsDone = tasks.some((t) => t.type === "results_summary" && t.status === "completed");
-  if (pivotDone) return "completed";
-  if (resultsDone && !tasks.some((t) => t.type === "pivot_proposals" && (t.status === "pending" || t.status === "ready" || t.status === "running"))) return "completed";
+  if (pivotDone || resultsDone) return "completed";
   if (tasks.every((t) => t.status === "completed" || t.status === "skipped")) return "completed";
   if (tasks.some((t) => t.status === "failed")) return "failed";
-  return "completed";
+  return "running";
 }
 
 function toWorkflowView(
