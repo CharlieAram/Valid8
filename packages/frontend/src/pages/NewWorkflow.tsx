@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createWorkflow } from "../api.ts";
+import ActivityLog from "../components/ActivityLog.tsx";
 
 export default function NewWorkflow() {
   const [idea, setIdea] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [log, setLog] = useState<string[]>([]);
   const navigate = useNavigate();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -13,11 +15,20 @@ export default function NewWorkflow() {
     if (!idea.trim()) return;
     setSubmitting(true);
     setError(null);
+    const lines = ["POST /api/workflows", "Creating workflow and idea confirmation task…"];
+    setLog(lines);
+    lines.forEach((l) => console.info(`[Valid8] ${l}`));
     try {
       const result = await createWorkflow(idea.trim());
+      const next = `Created workflow ${result.id.slice(0, 8)}…`;
+      console.info(`[Valid8] ${next}`);
+      setLog((prev) => [...prev, next, "Redirecting…"]);
       navigate(`/workflow/${result.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      console.error("[Valid8] createWorkflow failed", err);
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      setLog((prev) => [...prev, `Error: ${msg}`]);
+      setError(msg);
       setSubmitting(false);
     }
   }
@@ -39,6 +50,11 @@ export default function NewWorkflow() {
             disabled={submitting}
             autoFocus
           />
+          {submitting && log.length > 0 && (
+            <div className="mt-3">
+              <ActivityLog lines={log} />
+            </div>
+          )}
           {error && <div className="mt-2 text-sm text-red-600">{error}</div>}
           <div className="mt-3 flex justify-end">
             <button
@@ -46,7 +62,7 @@ export default function NewWorkflow() {
               disabled={!idea.trim() || submitting}
               className="px-5 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {submitting ? "Analyzing..." : "Start"}
+              {submitting ? "Working…" : "Start"}
             </button>
           </div>
         </form>

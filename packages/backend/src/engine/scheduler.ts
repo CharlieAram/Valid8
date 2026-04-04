@@ -5,7 +5,11 @@ import type { TaskContext, Dependency } from "./types.js";
 import type { TaskType, TaskStatus, ContactOutput } from "@valid8/shared";
 import { nanoid } from "nanoid";
 
-// Concurrency control: max tasks running at once per workflow
+/**
+ * Max tasks running at once **per workflow** (not global). When many contacts fan out,
+ * personalize_page / send_email / etc. run in parallel up to this cap, then the rest wait.
+ * Increase if your APIs tolerate more simultaneous calls.
+ */
 const MAX_CONCURRENT = 3;
 
 interface TaskRow {
@@ -188,6 +192,11 @@ async function executeTask(
     .set({ status: "running" as TaskStatus, startedAt: new Date() })
     .where(eq(schema.tasks.id, task.id));
 
+  console.log(
+    `[Valid8] task run start: ${task.type} taskId=${task.id} workflow=${workflowId}` +
+      (task.scopeJson ? ` scope=${task.scopeJson}` : "")
+  );
+
   const MAX_RETRIES = 3;
   let lastError: Error | null = null;
 
@@ -211,16 +220,31 @@ async function executeTask(
         })
         .where(eq(schema.tasks.id, task.id));
 
+      console.log(`[Valid8] task done: ${task.type} taskId=${task.id} workflow=${workflowId}`);
+
       if (spawnedTasks.length > 0) {
-        await db.insert(schema.tasks).values(
-          spawnedTasks.map((s) => ({
+        let rows: Array<{
+          id: string;
+          workflowId: string;
+          type: TaskType;
+          status: TaskStatus;
+          scopeJson: string | null;
+        }>;
+        try {
+          rows = spawnedTasks.map((s) => ({
             id: nanoid(),
             workflowId,
             type: s.type,
             status: getHandler(s.type).initialStatus ?? "pending",
             scopeJson: s.scope ? JSON.stringify(s.scope) : null,
-          }))
-        );
+          }));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          throw new Error(
+            `Spawn failed after ${task.type}: ${msg}. (Is every spawned task type registered in registerAllHandlers?)`
+          );
+        }
+        await db.insert(schema.tasks).values(rows);
       }
 
       await evaluate(workflowId);
@@ -244,6 +268,11 @@ async function executeTask(
       completedAt: new Date(),
     })
     .where(eq(schema.tasks.id, task.id));
+
+  console.error(
+    `[Valid8] task failed: ${task.type} taskId=${task.id} workflow=${workflowId}`,
+    lastError?.message ?? lastError
+  );
 
   // Even on failure, re-evaluate so other pending tasks can proceed
   await evaluate(workflowId);

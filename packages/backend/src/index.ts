@@ -6,6 +6,7 @@ import { recoverStaleTasks } from "./engine/scheduler.js";
 import workflowRoutes from "./routes/workflows.js";
 import webhookRoutes from "./routes/webhooks.js";
 import pageRoutes from "./routes/pages.js";
+import callRoutes from "./routes/call.js";
 
 // Register all task handlers before starting
 registerAllHandlers();
@@ -26,6 +27,7 @@ app.onError((err, c) => {
 
 app.route("/api/workflows", workflowRoutes);
 app.route("/api/webhooks", webhookRoutes);
+app.route("/api/call", callRoutes);
 app.route("/p", pageRoutes);
 
 app.get("/api/health", (c) => c.json({ ok: true }));

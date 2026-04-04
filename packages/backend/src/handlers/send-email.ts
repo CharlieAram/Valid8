@@ -6,6 +6,7 @@ import type { ContactOutput, IdeaConfirmationOutput } from "@valid8/shared";
 interface Input {
   workflowId: string;
   contact: ContactOutput["contacts"][number];
+  /** Per-contact variant URL from personalize_page */
   pageUrl: string;
   idea: IdeaConfirmationOutput;
 }
@@ -20,12 +21,12 @@ interface Output {
 
 export const sendEmailHandler: TaskHandler<Input, Output> = {
   type: "send_email",
-  dependencies: [{ kind: "after", taskType: "base_landing_page" }],
+  dependencies: [{ kind: "afterScoped", taskType: "personalize_page" }],
   resolveInput: (ctx) => {
     const contact = ctx.requireScopedContact() as ContactOutput["contacts"][number];
-    const page = ctx.getTaskOutput("base_landing_page") as { url: string };
+    const personalized = ctx.getTaskOutput("personalize_page", ctx.scope ?? undefined) as { url: string };
     const idea = ctx.getTaskOutput("idea_confirmation") as IdeaConfirmationOutput;
-    return { workflowId: ctx.workflowId, contact, pageUrl: page.url, idea };
+    return { workflowId: ctx.workflowId, contact, pageUrl: personalized.url, idea };
   },
   execute: async (input) => {
     const email = await generateOutreachEmail(

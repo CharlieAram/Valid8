@@ -13,6 +13,7 @@ import OutreachPanel from "../components/OutreachPanel.tsx";
 import WebsitePreview from "../components/WebsitePreview.tsx";
 import MarketResearchPanel from "../components/MarketResearchPanel.tsx";
 import AnalyticsBar from "../components/AnalyticsBar.tsx";
+import ActivityLog from "../components/ActivityLog.tsx";
 import type { ContactPipeline, QualitativeInsights } from "../mock.ts";
 import { MOCK_QUALITATIVE, buildQualitativeInsights } from "../mock.ts";
 import type { CallInsight } from "../mock.ts";
@@ -152,15 +153,49 @@ export default function WorkflowView() {
   const [workflow, setWorkflow] = useState<WorkflowViewType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadLog, setLoadLog] = useState<string[]>([]);
+  const [pollError, setPollError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
 
   useEffect(() => {
     if (!id) return;
+    const initialLines = [
+      `GET /api/workflows/${id.slice(0, 8)}…`,
+      "Fetching workflow state…",
+    ];
+    setLoadLog(initialLines);
+    initialLines.forEach((l) => console.info(`[Valid8] ${l}`));
+
     getWorkflow(id)
-      .then(setWorkflow)
-      .catch((e) => setError(e.message))
+      .then((w) => {
+        const ok = "Workflow loaded.";
+        console.info(`[Valid8] ${ok}`);
+        setLoadLog((prev) => [...prev, ok]);
+        setWorkflow(w);
+        setPollError(null);
+      })
+      .catch((e: unknown) => {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error("[Valid8] getWorkflow failed", e);
+        const fail = `Failed: ${message}`;
+        console.info(`[Valid8] ${fail}`);
+        setLoadLog((prev) => [...prev, fail]);
+        setError(message);
+      })
       .finally(() => setLoading(false));
-    intervalRef.current = setInterval(() => getWorkflow(id).then(setWorkflow), 3000);
+
+    intervalRef.current = setInterval(() => {
+      getWorkflow(id)
+        .then((w) => {
+          setWorkflow(w);
+          setPollError(null);
+        })
+        .catch((e: unknown) => {
+          const message = e instanceof Error ? e.message : String(e);
+          console.error("[Valid8] workflow poll failed", e);
+          setPollError(message);
+        });
+    }, 3000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -177,20 +212,24 @@ export default function WorkflowView() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-gray-400">
-        Loading...
+      <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
+        <ActivityLog lines={loadLog} />
+        <p className="text-xs text-gray-400">Waiting for server…</p>
       </div>
     );
   }
 
   if (error || !workflow) {
     return (
-      <div className="flex items-center justify-center h-full text-sm">
-        <span className="text-red-600">{error ?? "Not found"}</span>
-        <span className="mx-2">&mdash;</span>
-        <Link to="/" className="text-blue-600 hover:text-blue-800">
-          back
-        </Link>
+      <div className="flex flex-col items-center justify-center h-full text-sm gap-4 px-6">
+        <ActivityLog lines={loadLog} />
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          <span className="text-red-600">{error ?? "Not found"}</span>
+          <span className="text-gray-300">&mdash;</span>
+          <Link to="/" className="text-blue-600 hover:text-blue-800">
+            back
+          </Link>
+        </div>
       </div>
     );
   }
@@ -205,28 +244,46 @@ export default function WorkflowView() {
         confirmation={confirmTask.output as IdeaConfirmationOutput}
         onConfirm={async () => {
           if (id) {
-            await confirmIdea(id, true);
-            getWorkflow(id).then(setWorkflow);
+            try {
+              await confirmIdea(id, true);
+              await getWorkflow(id).then(setWorkflow);
+            } catch (e) {
+              console.error("[Valid8] confirmIdea failed", e);
+              throw e;
+            }
           }
         }}
         onRevise={async (r) => {
           if (id) {
-            await confirmIdea(id, false, r);
-            getWorkflow(id).then(setWorkflow);
+            try {
+              await confirmIdea(id, false, r);
+              await getWorkflow(id).then(setWorkflow);
+            } catch (e) {
+              console.error("[Valid8] confirmIdea (revise) failed", e);
+              throw e;
+            }
           }
         }}
       />
     );
   }
 
-  return <Dashboard workflow={workflow} />;
+  return <Dashboard workflow={workflow} pollError={pollError} onDismissPollError={() => setPollError(null)} />;
 }
 
 // ---------------------------------------------------------------------------
 // Dashboard — the 4-panel layout
 // ---------------------------------------------------------------------------
 
-function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
+function Dashboard({
+  workflow,
+  pollError,
+  onDismissPollError,
+}: {
+  workflow: WorkflowViewType;
+  pollError: string | null;
+  onDismissPollError: () => void;
+}) {
   const contacts = useMemo(() => extractContacts(workflow), [workflow]);
   const research = extractResearch(workflow);
   const { url: pageUrl, html: pageHtml } = extractPage(workflow);
@@ -238,13 +295,32 @@ function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
 
   return (
     <div className="h-full flex flex-col p-4 gap-3">
+      {pollError && (
+        <div
+          role="alert"
+          className="shrink-0 flex items-start justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+        >
+          <span>
+            <span className="font-semibold">Update failed: </span>
+            {pollError}
+            <span className="text-amber-700"> (showing last good data; check console)</span>
+          </span>
+          <button
+            type="button"
+            onClick={onDismissPollError}
+            className="shrink-0 text-amber-700 hover:text-amber-900 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <h1 className="text-lg font-semibold text-gray-900 truncate shrink-0">
         {workflow.ideaText}
       </h1>
 
       <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-3 min-h-0">
         <div className="row-span-2 min-h-0">
-          <OutreachPanel contacts={contacts} />
+          <OutreachPanel contacts={contacts} callInsights={qualitative?.callInsights ?? []} />
         </div>
         <div className="min-h-0">
           <WebsitePreview url={pageUrl} html={pageHtml} status={pageStatus} />

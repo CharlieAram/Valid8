@@ -1,4 +1,4 @@
-import { generateObject, generateText } from "ai";
+import { generateObject } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import type {
@@ -9,6 +9,12 @@ import type {
   ContactOutput,
   ResultsSummaryOutput,
 } from "@valid8/shared";
+import type {
+  LandingPageContent,
+  PersonalizationOverrides,
+  ColorTheme,
+  IconType,
+} from "./landing-template.js";
 
 const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -115,47 +121,6 @@ ${JSON.stringify(assumptions.assumptions, null, 2)}`,
   return object;
 }
 
-export async function generateLandingPageHTML(
-  idea: IdeaConfirmationOutput,
-): Promise<string> {
-  const { text } = await generateText({
-    model,
-    system: `You are an expert B2B SaaS landing page designer. Output a complete, self-contained HTML file.
-
-Rules:
-- Output ONLY raw HTML starting with <!DOCTYPE html>. No markdown, no code fences, no commentary.
-- Use <script src="https://cdn.tailwindcss.com"></script> for styling.
-- Professional, modern B2B SaaS design: clean typography, ample whitespace, polished feel.
-- Fully responsive — must look great on mobile and desktop.
-- Include proper <head> with charset, viewport meta, title, and description meta tag.
-- Use a cohesive blue/indigo primary color palette with neutral grays.
-- Sections:
-  1. Navbar with product name and "Get Started" anchor link
-  2. Hero: bold benefit-focused headline, subheadline, primary CTA button
-  3. Problem: 2-3 pain points the target market faces
-  4. Solution: how the product solves them, with 3 feature cards (use inline SVG icons)
-  5. Social proof: trust indicators like "Trusted by 100+ teams" and metric highlights
-  6. Final CTA with email capture form (input + submit button, action="#" method="POST")
-  7. Simple footer
-- Add subtle hover states and transitions.
-- Make the page feel like a real, launched product — not a template or wireframe.`,
-    prompt: `Create a landing page for this B2B product:
-
-Product: ${idea.summary}
-Target market: ${idea.targetMarket}
-Value proposition: ${idea.valueProposition}
-Revenue model: ${idea.revenueModel}
-
-Make the headline punchy and benefit-focused. Speak directly to the target market's pain points.`,
-  });
-
-  let html = text.trim();
-  if (html.startsWith("```")) {
-    html = html.replace(/^```\w*\n?/, "").replace(/\n?```$/, "");
-  }
-  return html;
-}
-
 export async function generateResultsSummary(
   idea: string,
   taskOutputs: Record<string, unknown>
@@ -191,39 +156,126 @@ ${JSON.stringify(taskOutputs, null, 2)}`,
   return object;
 }
 
-export async function generateLandingPageHtml(
-  idea: IdeaConfirmationOutput
-): Promise<string> {
-  const { text } = await generateText({
+export async function generateLandingPageContent(
+  idea: IdeaConfirmationOutput,
+): Promise<LandingPageContent> {
+  const { object } = await generateObject({
     model,
-    prompt: `Generate a complete, self-contained HTML landing page for this B2B product. The page should be clean, professional, and conversion-focused. Include a hero section, value proposition, key benefits, social proof placeholder, and a clear CTA (email signup form). Use inline CSS. The page must be a single HTML file with no external dependencies.
+    schema: z.object({
+      productName: z.string().describe("Catchy product name, 1-3 words"),
+      headline: z
+        .string()
+        .describe("Hero headline, 6-12 words, benefit-focused, punchy"),
+      subheadline: z
+        .string()
+        .describe("1-2 sentences supporting the headline with specifics"),
+      ctaText: z
+        .string()
+        .describe("CTA button text, 2-5 words, action-oriented"),
+      painPoints: z
+        .array(
+          z.object({
+            title: z.string().describe("3-6 word pain point title"),
+            description: z.string().describe("1-2 concrete sentences"),
+          }),
+        )
+        .min(3)
+        .max(3),
+      solutionIntro: z
+        .string()
+        .describe("One compelling sentence introducing the solution"),
+      features: z
+        .array(
+          z.object({
+            title: z.string().describe("Feature name, 2-5 words"),
+            description: z.string().describe("1-2 specific sentences"),
+            icon: z.enum([
+              "chart",
+              "shield",
+              "zap",
+              "target",
+              "layers",
+              "globe",
+              "clock",
+              "users",
+            ] as [IconType, ...IconType[]]),
+          }),
+        )
+        .min(3)
+        .max(3),
+      metrics: z
+        .array(
+          z.object({
+            value: z
+              .string()
+              .describe("Impressive metric like '10x', '99.9%', '3M+'"),
+            label: z.string().describe("What the metric measures, 2-5 words"),
+          }),
+        )
+        .min(3)
+        .max(3),
+      finalCtaHeadline: z
+        .string()
+        .describe("Compelling closing headline, 5-10 words"),
+      finalCtaDescription: z
+        .string()
+        .describe("One sentence final push to sign up"),
+      colorTheme: z
+        .enum([
+          "blue",
+          "violet",
+          "emerald",
+          "amber",
+          "rose",
+          "cyan",
+        ] as [ColorTheme, ...ColorTheme[]])
+        .describe("Best color for this product's industry"),
+    }),
+    prompt: `Generate landing page content for this B2B product. Write like a top copywriter — punchy, specific, zero fluff.
 
-Product summary: ${idea.summary}
+Rules:
+- Headline: benefit-focused, speaks to the pain. No "revolutionize" or "transform".
+- Pain points: real daily problems the target faces. Be concrete.
+- Features: specific capabilities with clear outcomes.
+- Metrics: aspirational but believable. Mix formats (percentages, multipliers, counts).
+- Pick the icon that best represents each feature.
+- Pick the color theme that fits the product's space.
+
+Product: ${idea.summary}
 Target market: ${idea.targetMarket}
 Value proposition: ${idea.valueProposition}
-Revenue model: ${idea.revenueModel}
-
-Return ONLY the HTML, no markdown fences or explanation.`,
+Revenue model: ${idea.revenueModel}`,
   });
-  return text;
+  return object as LandingPageContent;
 }
 
-export async function generatePersonalizedPageHtml(
-  baseHtml: string,
-  contact: { name: string; company: string; role: string }
-): Promise<string> {
-  const { text } = await generateText({
+export async function generatePersonalizationOverrides(
+  content: LandingPageContent,
+  contact: { name: string; company: string; role: string },
+): Promise<PersonalizationOverrides> {
+  const { object } = await generateObject({
     model,
-    prompt: `Take this landing page HTML and personalize it for a specific prospect. Adjust the headline, subheadline, and CTA copy to speak directly to their role and company. Keep the same layout and styling. Do NOT change the form or its action.
+    schema: z.object({
+      headline: z
+        .string()
+        .describe("Personalized headline referencing their role or company"),
+      subheadline: z
+        .string()
+        .describe("Personalized subheadline for this prospect"),
+      ctaText: z.string().optional().describe("Optionally personalized CTA"),
+      finalCtaHeadline: z
+        .string()
+        .optional()
+        .describe("Optionally personalized final CTA headline"),
+    }),
+    prompt: `Personalize this landing page copy for a specific prospect. Adjust the headline and subheadline to speak directly to their role and company. Keep the same product positioning.
 
 Contact: ${contact.name}, ${contact.role} at ${contact.company}
-
-Base HTML:
-${baseHtml}
-
-Return ONLY the modified HTML, no markdown fences or explanation.`,
+Current headline: ${content.headline}
+Current subheadline: ${content.subheadline}
+Product: ${content.productName}`,
   });
-  return text;
+  return object;
 }
 
 export async function generateContacts(

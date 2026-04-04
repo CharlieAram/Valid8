@@ -8,13 +8,19 @@ import type {
 const BASE = "/api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const method = options?.method ?? "GET";
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Request failed: ${res.status}`);
+    const msg =
+      typeof body === "object" && body && "error" in body && typeof (body as { error: unknown }).error === "string"
+        ? (body as { error: string }).error
+        : `Request failed: ${res.status}`;
+    console.error(`[Valid8 API] ${method} ${path} failed (${res.status}):`, msg, body);
+    throw new Error(msg);
   }
   return res.json();
 }

@@ -20,8 +20,9 @@ export default function Sidebar({ workflows }: { workflows: WorkflowView[] }) {
     try {
       await deleteWorkflow(workflowId);
       if (id === workflowId) navigate("/new");
-    } catch {
-      alert("Failed to delete workflow");
+    } catch (e) {
+      console.error("[Valid8] deleteWorkflow failed", workflowId, e);
+      alert(`Failed to delete workflow: ${e instanceof Error ? e.message : "unknown error"}`);
     }
   }
 

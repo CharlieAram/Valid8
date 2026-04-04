@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { IdeaConfirmationOutput } from "@valid8/shared";
+import ActivityLog from "./ActivityLog.tsx";
 
 interface Props {
   ideaText: string;
@@ -12,19 +13,48 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
   const [editing, setEditing] = useState(false);
   const [revised, setRevised] = useState("");
   const [busy, setBusy] = useState(false);
+  const [actionLog, setActionLog] = useState<string[]>([]);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function handleConfirm() {
     setBusy(true);
-    await onConfirm();
+    setActionError(null);
+    const line = "POST /api/workflows/…/confirm (confirmed)";
+    setActionLog([line]);
+    console.info(`[Valid8] ${line}`);
+    try {
+      await onConfirm();
+      console.info("[Valid8] Idea confirmed — workflow tasks will start.");
+    } catch (e) {
+      console.error("[Valid8] confirm failed", e);
+      const msg = e instanceof Error ? e.message : "Confirmation failed";
+      setActionError(msg);
+      setActionLog((prev) => [...prev, `Error: ${msg}`]);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleRevise() {
     if (!revised.trim()) return;
     setBusy(true);
-    await onRevise(revised.trim());
-    setBusy(false);
-    setEditing(false);
-    setRevised("");
+    setActionError(null);
+    const line = "POST /api/workflows/…/confirm (revised idea)";
+    setActionLog([line]);
+    console.info(`[Valid8] ${line}`);
+    try {
+      await onRevise(revised.trim());
+      console.info("[Valid8] Revised idea submitted — re-analyzing.");
+      setEditing(false);
+      setRevised("");
+    } catch (e) {
+      console.error("[Valid8] revise failed", e);
+      const msg = e instanceof Error ? e.message : "Request failed";
+      setActionError(msg);
+      setActionLog((prev) => [...prev, `Error: ${msg}`]);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -64,6 +94,14 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
 
         {editing ? (
           <div>
+            {busy && actionLog.length > 0 && (
+              <div className="mb-3">
+                <ActivityLog lines={actionLog} />
+              </div>
+            )}
+            {actionError && !busy && (
+              <p className="mb-2 text-sm text-red-600">{actionError}</p>
+            )}
             <textarea
               value={revised}
               onChange={(e) => setRevised(e.target.value)}
@@ -78,7 +116,7 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
                 disabled={!revised.trim() || busy}
                 className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-40"
               >
-                Re-analyze
+                {busy ? "Sending…" : "Re-analyze"}
               </button>
               <button
                 onClick={() => setEditing(false)}
@@ -89,20 +127,26 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
             </div>
           </div>
         ) : (
-          <div className="flex justify-center gap-3">
-            <button
-              onClick={handleConfirm}
-              disabled={busy}
-              className="px-6 py-2.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-40"
-            >
-              {busy ? "Starting..." : "Confirm \u2713"}
-            </button>
-            <button
-              onClick={() => setEditing(true)}
-              className="px-6 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50"
-            >
-              Clarify \u2717
-            </button>
+          <div className="flex flex-col items-center gap-3">
+            {busy && actionLog.length > 0 && <ActivityLog lines={actionLog} />}
+            {actionError && !busy && (
+              <p className="text-sm text-red-600 text-center max-w-md">{actionError}</p>
+            )}
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={handleConfirm}
+                disabled={busy}
+                className="px-6 py-2.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-40"
+              >
+                {busy ? "Sending…" : "Confirm \u2713"}
+              </button>
+              <button
+                onClick={() => setEditing(true)}
+                className="px-6 py-2.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50"
+              >
+                Clarify \u2717
+              </button>
+            </div>
           </div>
         )}
       </div>
