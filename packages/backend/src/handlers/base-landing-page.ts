@@ -19,9 +19,6 @@ export const baseLandingPageHandler: TaskHandler<IdeaConfirmationOutput, Output>
     const html = await generateLandingPageHtml(input);
     const result = await generateLandingPage({
       workflowId: ctx.workflowId,
-      ideaSummary: input.summary,
-      valueProposition: input.valueProposition,
-      targetMarket: input.targetMarket,
       html,
     });
     return { pageId: result.pageId, url: result.url, html };

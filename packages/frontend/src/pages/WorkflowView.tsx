@@ -13,19 +13,11 @@ import OutreachPanel from "../components/OutreachPanel.tsx";
 import WebsitePreview from "../components/WebsitePreview.tsx";
 import MarketResearchPanel from "../components/MarketResearchPanel.tsx";
 import AnalyticsBar from "../components/AnalyticsBar.tsx";
-import {
-  getMockContacts,
-  MOCK_RESEARCH,
-  MOCK_ANALYTICS,
-  MOCK_PAGE_URL,
-  type ContactPipeline,
-} from "../mock.ts";
+import type { ContactPipeline } from "../mock.ts";
 import type { Analytics } from "../components/AnalyticsBar.tsx";
 
 // ---------------------------------------------------------------------------
 // Data extraction helpers — pull structured data from raw task outputs.
-// When a task hasn't completed yet, falls back to mock data.
-// Remove mock fallbacks as real services are integrated.
 // ---------------------------------------------------------------------------
 
 function taskStatus(workflow: WorkflowViewType, type: string): TaskStatus {
@@ -36,7 +28,7 @@ function extractContacts(workflow: WorkflowViewType): ContactPipeline[] {
   const discovery = workflow.tasks.find(
     (t) => t.type === "contact_discovery" && t.status === "completed",
   );
-  if (!discovery?.output) return getMockContacts(); // MOCK FALLBACK
+  if (!discovery?.output) return [];
 
   const { contacts } = discovery.output as ContactOutput;
   return contacts.map((contact) => {
@@ -75,12 +67,23 @@ function extractPage(workflow: WorkflowViewType): { url: string | null; html: st
 }
 
 function computeAnalytics(contacts: ContactPipeline[]): Analytics {
-  if (contacts.length === 0) return MOCK_ANALYTICS; // MOCK FALLBACK
-
   const total = contacts.length;
   const emailsSent = contacts.filter((c) => c.email === "completed").length;
   const replies = contacts.filter((c) => ["completed", "running"].includes(c.phone)).length;
   const paid = contacts.filter((c) => c.paid).length;
+
+  if (total === 0) {
+    return {
+      emailsSent: 0,
+      replies: 0,
+      replyRate: 0,
+      pageVisits: 0,
+      paid: 0,
+      paidRate: 0,
+      confidence: 0,
+      conclusion: "Validation starting — gathering initial data.",
+    };
+  }
 
   return {
     emailsSent,
@@ -186,7 +189,7 @@ export default function WorkflowView() {
 }
 
 // ---------------------------------------------------------------------------
-// Dashboard — the 4-panel layout matching the wireframe
+// Dashboard — the 4-panel layout
 // ---------------------------------------------------------------------------
 
 function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
@@ -198,15 +201,6 @@ function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
   const researchStatus = taskStatus(workflow, "market_research");
   const pageStatus = taskStatus(workflow, "base_landing_page");
 
-  // Use real data when available, mock data as fallback
-  const displayResearch = research ?? MOCK_RESEARCH; // MOCK FALLBACK
-  const displayResearchStatus = research ? ("completed" as const) : researchStatus;
-  const displayPageUrl = pageUrl ?? (pageHtml ? null : MOCK_PAGE_URL); // MOCK FALLBACK only if no HTML
-  const displayPageHtml = pageHtml ?? null;
-  const displayPageStatus = pageUrl || pageHtml ? ("completed" as const) : pageStatus;
-  const displayContacts = contacts.length > 0 ? contacts : getMockContacts(); // MOCK FALLBACK
-  const displayAnalytics = contacts.length > 0 ? analytics : MOCK_ANALYTICS; // MOCK FALLBACK
-
   return (
     <div className="h-full flex flex-col p-4 gap-3">
       <h1 className="text-lg font-semibold text-gray-900 truncate shrink-0">
@@ -215,17 +209,17 @@ function Dashboard({ workflow }: { workflow: WorkflowViewType }) {
 
       <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-3 min-h-0">
         <div className="row-span-2 min-h-0">
-          <OutreachPanel contacts={displayContacts} />
+          <OutreachPanel contacts={contacts} />
         </div>
         <div className="min-h-0">
-          <WebsitePreview url={displayPageUrl} html={displayPageHtml} status={displayPageStatus} />
+          <WebsitePreview url={pageUrl} html={pageHtml} status={pageStatus} />
         </div>
         <div className="min-h-0">
-          <MarketResearchPanel research={displayResearch} status={displayResearchStatus} />
+          <MarketResearchPanel research={research} status={researchStatus} />
         </div>
       </div>
 
-      <AnalyticsBar analytics={displayAnalytics} />
+      <AnalyticsBar analytics={analytics} />
     </div>
   );
 }

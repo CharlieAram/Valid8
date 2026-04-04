@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db, schema } from "../db/index.js";
 import {
@@ -161,19 +161,15 @@ app.post("/:id/contacts", async (c) => {
     return c.json({ error: "contacts array is required" }, 400);
   }
 
-  const inserted = [];
-  for (const contact of body.contacts) {
-    const id = nanoid();
-    await db.insert(schema.contacts).values({
-      id,
-      workflowId,
-      name: contact.name,
-      email: contact.email,
-      company: contact.company,
-      role: contact.role,
-    });
-    inserted.push({ id, ...contact });
-  }
+  const inserted = body.contacts.map((contact) => ({
+    id: nanoid(),
+    workflowId,
+    name: contact.name,
+    email: contact.email,
+    company: contact.company,
+    role: contact.role,
+  }));
+  await db.insert(schema.contacts).values(inserted);
 
   return c.json({ contacts: inserted }, 201);
 });
@@ -198,8 +194,9 @@ app.delete("/:id", async (c) => {
     .from(schema.landingPageVariants)
     .where(eq(schema.landingPageVariants.workflowId, workflowId));
 
-  for (const v of variants) {
-    await db.delete(schema.pageEvents).where(eq(schema.pageEvents.variantId, v.id));
+  const variantIds = variants.map((v) => v.id);
+  if (variantIds.length > 0) {
+    await db.delete(schema.pageEvents).where(inArray(schema.pageEvents.variantId, variantIds));
   }
   await db.delete(schema.landingPageVariants).where(eq(schema.landingPageVariants.workflowId, workflowId));
   await db.delete(schema.landingPages).where(eq(schema.landingPages.workflowId, workflowId));

@@ -1,7 +1,7 @@
 import type { TaskHandler } from "../engine/types.js";
 import { generateResultsSummary } from "../services/ai.js";
 import type { IdeaConfirmationOutput, ResultsSummaryOutput } from "@valid8/shared";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
 
 export const resultsSummaryHandler: TaskHandler<Record<string, unknown>, ResultsSummaryOutput> = {
@@ -43,21 +43,22 @@ export const resultsSummaryHandler: TaskHandler<Record<string, unknown>, Results
       return output.scheduled === true;
     }).length;
 
-    // Collect page events
+    // Collect page events in a single query
     const variants = await db
-      .select()
+      .select({ id: schema.landingPageVariants.id })
       .from(schema.landingPageVariants)
       .where(eq(schema.landingPageVariants.workflowId, ctx.workflowId));
 
+    const variantIds = variants.map((v) => v.id);
     let pageVisits = 0;
     let signups = 0;
-    for (const v of variants) {
+    if (variantIds.length > 0) {
       const events = await db
         .select()
         .from(schema.pageEvents)
-        .where(eq(schema.pageEvents.variantId, v.id));
-      pageVisits += events.filter((e) => e.eventType === "visit").length;
-      signups += events.filter((e) => e.eventType === "signup").length;
+        .where(inArray(schema.pageEvents.variantId, variantIds));
+      pageVisits = events.filter((e) => e.eventType === "visit").length;
+      signups = events.filter((e) => e.eventType === "signup").length;
     }
 
     // Build enriched data for AI analysis

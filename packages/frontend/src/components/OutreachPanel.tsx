@@ -29,6 +29,7 @@ const STAGE_STYLE: Record<TaskStatus, string> = {
   pending: "bg-gray-300",
   waiting_for_input: "bg-amber-500",
   failed: "bg-red-500",
+  skipped: "bg-gray-400",
 };
 
 const STAGE_TEXT: Record<TaskStatus, string> = {
@@ -38,6 +39,7 @@ const STAGE_TEXT: Record<TaskStatus, string> = {
   pending: "text-gray-400",
   waiting_for_input: "text-amber-600",
   failed: "text-red-600",
+  skipped: "text-gray-400",
 };
 
 function Stage({ status, label }: { status: TaskStatus; label: string }) {

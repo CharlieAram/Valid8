@@ -59,18 +59,22 @@ export const contactDiscoveryHandler: TaskHandler<Input, ContactOutput> = {
             personaId: persona.id,
             linkedinUrl: g.linkedinUrl,
           });
-
-          // Store in DB (no personaId FK — personas live in task output only)
-          await db.insert(schema.contacts).values({
-            id: contactId,
-            workflowId: ctx.workflowId,
-            name: g.name,
-            email: g.email,
-            company: g.company,
-            role: g.role,
-            linkedinUrl: g.linkedinUrl ?? null,
-          });
         }
+      }
+
+      // Batch insert all contacts
+      if (contacts.length > 0) {
+        await db.insert(schema.contacts).values(
+          contacts.map((c) => ({
+            id: c.id,
+            workflowId: ctx.workflowId,
+            name: c.name,
+            email: c.email,
+            company: c.company,
+            role: c.role,
+            linkedinUrl: c.linkedinUrl ?? null,
+          }))
+        );
       }
     }
 

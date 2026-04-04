@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
 import { getHandler } from "./registry.js";
 import type { TaskContext, Dependency } from "./types.js";
@@ -7,7 +7,6 @@ import { nanoid } from "nanoid";
 
 // Concurrency control: max tasks running at once per workflow
 const MAX_CONCURRENT = 3;
-const runningTasks = new Set<string>();
 
 interface TaskRow {
   id: string;
@@ -184,8 +183,6 @@ async function executeTask(
   const spawnedTasks: Array<{ type: TaskType; scope?: Record<string, string> }> = [];
   const ctx = buildContext(task, allTasks, workflowId, spawnedTasks);
 
-  runningTasks.add(task.id);
-
   await db
     .update(schema.tasks)
     .set({ status: "running" as TaskStatus, startedAt: new Date() })
@@ -226,7 +223,6 @@ async function executeTask(
         );
       }
 
-      runningTasks.delete(task.id);
       await evaluate(workflowId);
       return;
     } catch (err) {
@@ -238,7 +234,6 @@ async function executeTask(
     }
   }
 
-  runningTasks.delete(task.id);
   await db
     .update(schema.tasks)
     .set({
@@ -255,29 +250,22 @@ async function executeTask(
 }
 
 export async function recoverStaleTasks(): Promise<void> {
-  // Reset any "running" or "ready" tasks back to "pending" so they can be retried
-  const stale = await db
+  const staleTasks = await db
     .select()
     .from(schema.tasks)
-    .where(eq(schema.tasks.status, "running"));
-  const staleReady = await db
-    .select()
-    .from(schema.tasks)
-    .where(eq(schema.tasks.status, "ready"));
-  const all = [...stale, ...staleReady];
+    .where(inArray(schema.tasks.status, ["running", "ready"]));
 
-  if (all.length === 0) return;
+  if (staleTasks.length === 0) return;
 
-  console.log(`Recovering ${all.length} stale tasks...`);
-  const workflowIds = new Set<string>();
+  console.log(`Recovering ${staleTasks.length} stale tasks...`);
 
-  for (const task of all) {
-    await db
-      .update(schema.tasks)
-      .set({ status: "pending" as TaskStatus, startedAt: null })
-      .where(eq(schema.tasks.id, task.id));
-    workflowIds.add(task.workflowId);
-  }
+  const staleIds = staleTasks.map((t) => t.id);
+  await db
+    .update(schema.tasks)
+    .set({ status: "pending" as TaskStatus, startedAt: null })
+    .where(inArray(schema.tasks.id, staleIds));
+
+  const workflowIds = new Set(staleTasks.map((t) => t.workflowId));
 
   // Re-evaluate each affected workflow
   for (const wid of workflowIds) {
