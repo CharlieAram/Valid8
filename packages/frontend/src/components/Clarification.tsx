@@ -28,38 +28,26 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
   }
 
   return (
-    <div className="flex items-center justify-center h-full bg-neutral-50">
-      <div className="w-full max-w-2xl px-6">
-        <div className="mb-6">
-          <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-2">
-            Your input
-          </div>
-          <div className="rounded-xl bg-white border border-neutral-200 px-4 py-3 text-sm text-neutral-600 leading-relaxed">
-            {ideaText}
-          </div>
-        </div>
+    <div className="flex items-center justify-center h-full">
+      <div className="w-full max-w-xl px-6">
+        <p className="text-sm text-neutral-500 mb-4">You said:</p>
+        <p className="text-sm text-neutral-700 mb-6 pl-3 border-l-2 border-neutral-200">{ideaText}</p>
 
-        <div className="mb-8">
-          <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-2">
-            Our understanding
-          </div>
-          <div className="rounded-xl bg-white border border-neutral-200 p-5">
-            <p className="text-[15px] text-neutral-900 leading-relaxed mb-5">
-              {confirmation.summary}
-            </p>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: "Target market", value: confirmation.targetMarket },
-                { label: "Value proposition", value: confirmation.valueProposition },
-                { label: "Revenue model", value: confirmation.revenueModel },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-wider mb-1">
-                    {item.label}
-                  </div>
-                  <div className="text-sm text-neutral-700 leading-relaxed">{item.value}</div>
-                </div>
-              ))}
+        <p className="text-sm text-neutral-500 mb-2">Here's what we understood:</p>
+        <div className="mb-6">
+          <p className="text-base text-neutral-900 leading-relaxed mb-4">{confirmation.summary}</p>
+          <div className="grid grid-cols-3 gap-x-6 gap-y-3 text-sm">
+            <div>
+              <div className="text-neutral-400 text-xs mb-0.5">Market</div>
+              <div className="text-neutral-700">{confirmation.targetMarket}</div>
+            </div>
+            <div>
+              <div className="text-neutral-400 text-xs mb-0.5">Value prop</div>
+              <div className="text-neutral-700">{confirmation.valueProposition}</div>
+            </div>
+            <div>
+              <div className="text-neutral-400 text-xs mb-0.5">Revenue</div>
+              <div className="text-neutral-700">{confirmation.revenueModel}</div>
             </div>
           </div>
         </div>
@@ -69,41 +57,41 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
             <textarea
               value={revised}
               onChange={(e) => setRevised(e.target.value)}
-              placeholder="Rewrite or clarify your idea..."
-              rows={4}
-              className="w-full border border-neutral-200 rounded-xl px-4 py-3.5 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 resize-y bg-white transition-all"
+              placeholder="Rewrite or clarify..."
+              rows={3}
+              className="w-full border border-neutral-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-900 resize-y"
               autoFocus
             />
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleRevise}
                 disabled={!revised.trim() || busy}
-                className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-30 transition-all"
+                className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-800 disabled:opacity-30"
               >
                 Re-analyze
               </button>
               <button
                 onClick={() => setEditing(false)}
-                className="px-5 py-2.5 text-neutral-500 text-sm hover:text-neutral-700 transition-colors"
+                className="px-4 py-2 text-neutral-500 text-sm hover:text-neutral-700"
               >
                 Cancel
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex justify-center gap-3">
+          <div className="flex gap-3">
             <button
               onClick={handleConfirm}
               disabled={busy}
-              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-30 transition-all"
+              className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-800 disabled:opacity-30"
             >
-              {busy ? "Starting..." : "Looks right, start"}
+              {busy ? "Starting..." : "Correct, go"}
             </button>
             <button
               onClick={() => setEditing(true)}
-              className="px-6 py-2.5 border border-neutral-200 text-neutral-700 text-sm font-medium rounded-xl hover:bg-neutral-50 transition-all"
+              className="px-4 py-2 text-neutral-500 text-sm hover:text-neutral-700"
             >
-              Not quite, let me clarify
+              Let me clarify
             </button>
           </div>
         )}

@@ -23,38 +23,30 @@ export default function NewWorkflow() {
   }
 
   return (
-    <div className="flex items-center justify-center h-full bg-neutral-50">
-      <div className="w-full max-w-lg px-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">
-            Validate an idea
-          </h1>
-          <p className="text-sm text-neutral-500 mt-1.5 leading-relaxed">
-            Describe your B2B idea. We'll research the market, find real prospects, and run outreach to test demand.
-          </p>
-        </div>
+    <div className="flex items-center justify-center h-full">
+      <div className="w-full max-w-md px-6">
+        <h1 className="text-xl font-semibold text-neutral-900 mb-1">New validation</h1>
+        <p className="text-sm text-neutral-500 mb-6">
+          Describe your B2B idea. We'll find real prospects and test demand.
+        </p>
         <form onSubmit={handleSubmit}>
           <textarea
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
-            placeholder="e.g. AI-powered safety cameras for construction sites that detect hazards in real-time and alert supervisors..."
-            rows={5}
-            className="w-full border border-neutral-200 rounded-xl px-4 py-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 resize-y bg-white transition-all"
+            placeholder="What's the idea? Who's it for?"
+            rows={4}
+            className="w-full border border-neutral-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:border-neutral-900 resize-y"
             disabled={submitting}
             autoFocus
           />
-          {error && (
-            <div className="mt-2.5 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
-              {error}
-            </div>
-          )}
-          <div className="mt-4 flex justify-end">
+          {error && <div className="mt-2 text-sm text-red-600">{error}</div>}
+          <div className="mt-3 flex justify-end">
             <button
               type="submit"
               disabled={!idea.trim() || submitting}
-              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-md hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              {submitting ? "Analyzing..." : "Start validation"}
+              {submitting ? "Analyzing..." : "Start"}
             </button>
           </div>
         </form>
