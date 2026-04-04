@@ -37,6 +37,12 @@ export default function NewWorkflow() {
           <textarea
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && idea.trim() && !submitting) {
+                e.preventDefault();
+                handleSubmit(e as unknown as React.FormEvent);
+              }
+            }}
             placeholder="e.g. AI-powered safety cameras for construction sites that detect hazards in real-time and alert supervisors..."
             rows={5}
             className="w-full border border-neutral-200 px-4 py-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400 resize-y bg-white transition-all"

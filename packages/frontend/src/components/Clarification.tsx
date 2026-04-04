@@ -27,8 +27,16 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
     setRevised("");
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !busy) {
+      e.preventDefault();
+      if (editing && revised.trim()) handleRevise();
+      else if (!editing) handleConfirm();
+    }
+  }
+
   return (
-    <div className="flex items-center justify-center h-full bg-neutral-50">
+    <div className="flex items-center justify-center h-full bg-neutral-50" onKeyDown={handleKeyDown}>
       <div className="w-full max-w-2xl px-6">
         <div className="mb-6">
           <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mb-2">
