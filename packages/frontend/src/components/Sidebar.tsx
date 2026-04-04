@@ -1,5 +1,6 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import type { WorkflowView } from "@valid8/shared";
+import { deleteWorkflow } from "../api.ts";
 
 const STATUS_COLOR: Record<string, string> = {
   completed: "bg-green-500",
@@ -10,6 +11,19 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function Sidebar({ workflows }: { workflows: WorkflowView[] }) {
   const { id } = useParams();
+  const navigate = useNavigate();
+
+  async function handleDelete(e: React.MouseEvent, workflowId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Delete this workflow?")) return;
+    try {
+      await deleteWorkflow(workflowId);
+      if (id === workflowId) navigate("/new");
+    } catch {
+      alert("Failed to delete workflow");
+    }
+  }
 
   return (
     <aside className="w-56 shrink-0 bg-gray-50 border-r border-gray-200 flex flex-col h-screen">
@@ -34,7 +48,7 @@ export default function Sidebar({ workflows }: { workflows: WorkflowView[] }) {
             <Link
               key={w.id}
               to={`/workflow/${w.id}`}
-              className={`block px-3 py-2 rounded-md text-sm truncate transition-colors ${
+              className={`block px-3 py-2 rounded-md text-sm truncate transition-colors group ${
                 w.id === id
                   ? "bg-gray-200 text-gray-900 font-medium"
                   : "text-gray-600 hover:bg-gray-100"
@@ -44,7 +58,13 @@ export default function Sidebar({ workflows }: { workflows: WorkflowView[] }) {
                 <span
                   className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLOR[w.status] ?? "bg-gray-300"}`}
                 />
-                <span className="truncate">{w.ideaText.slice(0, 50)}</span>
+                <span className="flex-1 truncate">{w.ideaText.slice(0, 50)}</span>
+                <button
+                  onClick={(e) => handleDelete(e, w.id)}
+                  className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 text-xs shrink-0"
+                >
+                  &times;
+                </button>
               </div>
             </Link>
           ))}

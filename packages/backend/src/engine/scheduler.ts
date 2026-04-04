@@ -1,9 +1,12 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
 import { getHandler } from "./registry.js";
 import type { TaskContext, Dependency } from "./types.js";
 import type { TaskType, TaskStatus, ContactOutput } from "@valid8/shared";
 import { nanoid } from "nanoid";
+
+// Concurrency control: max tasks running at once per workflow
+const MAX_CONCURRENT = 3;
 
 interface TaskRow {
   id: string;
@@ -34,6 +37,8 @@ function scopesMatch(
   return keysA.every((k) => a[k] === b[k]);
 }
 
+const TERMINAL = new Set(["completed", "failed", "skipped"]);
+
 function isDependencyMet(
   dep: Dependency,
   task: TaskRow,
@@ -51,16 +56,33 @@ function isDependencyMet(
       return allTasks.some(
         (t) =>
           t.type === dep.taskType &&
-          t.status === "completed" &&
+          TERMINAL.has(t.status) &&
           scopesMatch(parseScope(t.scopeJson), scope)
       );
 
     case "afterAll": {
       const tasksOfType = allTasks.filter((t) => t.type === dep.taskType);
       if (tasksOfType.length === 0) return false;
-      return tasksOfType.every((t) => t.status === "completed");
+      return tasksOfType.every((t) => TERMINAL.has(t.status));
     }
   }
+}
+
+function hasScopedDepFailed(
+  deps: Dependency[],
+  task: TaskRow,
+  allTasks: TaskRow[]
+): boolean {
+  const scope = parseScope(task.scopeJson);
+  return deps.some((dep) => {
+    if (dep.kind !== "afterScoped") return false;
+    return allTasks.some(
+      (t) =>
+        t.type === dep.taskType &&
+        (t.status === "failed" || t.status === "skipped") &&
+        scopesMatch(parseScope(t.scopeJson), scope)
+    );
+  });
 }
 
 export async function evaluate(workflowId: string): Promise<void> {
@@ -70,14 +92,36 @@ export async function evaluate(workflowId: string): Promise<void> {
     .where(eq(schema.tasks.workflowId, workflowId));
 
   const pendingTasks = allTasks.filter((t) => t.status === "pending");
+  const currentRunning = allTasks.filter(
+    (t) => t.status === "running" || t.status === "ready"
+  ).length;
+
+  let launched = 0;
 
   for (const task of pendingTasks) {
     const handler = getHandler(task.type as TaskType);
+
+    // If a scoped dependency failed, skip this task
+    if (hasScopedDepFailed(handler.dependencies, task, allTasks)) {
+      await db
+        .update(schema.tasks)
+        .set({
+          status: "skipped" as TaskStatus,
+          outputJson: JSON.stringify({ skipped: true, reason: "dependency failed" }),
+          completedAt: new Date(),
+        })
+        .where(eq(schema.tasks.id, task.id));
+      continue;
+    }
+
+    if (currentRunning + launched >= MAX_CONCURRENT) break;
+
     const allMet = handler.dependencies.every((dep) =>
       isDependencyMet(dep, task, allTasks)
     );
 
     if (allMet) {
+      launched++;
       await db
         .update(schema.tasks)
         .set({ status: "ready" as TaskStatus })
@@ -126,6 +170,10 @@ function buildContext(
   };
 }
 
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 async function executeTask(
   task: TaskRow,
   allTasks: TaskRow[],
@@ -140,43 +188,88 @@ async function executeTask(
     .set({ status: "running" as TaskStatus, startedAt: new Date() })
     .where(eq(schema.tasks.id, task.id));
 
-  try {
-    const input = handler.resolveInput(ctx);
-    const output = await handler.execute(input, ctx);
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
 
-    await db
-      .update(schema.tasks)
-      .set({
-        status: "completed" as TaskStatus,
-        outputJson: JSON.stringify(output),
-        completedAt: new Date(),
-      })
-      .where(eq(schema.tasks.id, task.id));
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+        console.log(`Retrying ${task.type} (attempt ${attempt + 1}) after ${delay}ms...`);
+        await sleep(delay);
+      }
 
-    if (spawnedTasks.length > 0) {
-      await db.insert(schema.tasks).values(
-        spawnedTasks.map((s) => ({
-          id: nanoid(),
-          workflowId,
-          type: s.type,
-          status: getHandler(s.type).initialStatus ?? "pending",
-          scopeJson: s.scope ? JSON.stringify(s.scope) : null,
-        }))
-      );
+      const input = handler.resolveInput(ctx);
+      const output = await handler.execute(input, ctx);
+
+      await db
+        .update(schema.tasks)
+        .set({
+          status: "completed" as TaskStatus,
+          outputJson: JSON.stringify(output),
+          completedAt: new Date(),
+        })
+        .where(eq(schema.tasks.id, task.id));
+
+      if (spawnedTasks.length > 0) {
+        await db.insert(schema.tasks).values(
+          spawnedTasks.map((s) => ({
+            id: nanoid(),
+            workflowId,
+            type: s.type,
+            status: getHandler(s.type).initialStatus ?? "pending",
+            scopeJson: s.scope ? JSON.stringify(s.scope) : null,
+          }))
+        );
+      }
+
+      await evaluate(workflowId);
+      return;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const isRetryable = lastError.message.includes("rate limit") ||
+        lastError.message.includes("429") ||
+        lastError.message.includes("overloaded");
+      if (!isRetryable) break;
     }
+  }
 
-    await evaluate(workflowId);
-  } catch (err) {
-    await db
-      .update(schema.tasks)
-      .set({
-        status: "failed" as TaskStatus,
-        outputJson: JSON.stringify({
-          error: err instanceof Error ? err.message : String(err),
-        }),
-        completedAt: new Date(),
-      })
-      .where(eq(schema.tasks.id, task.id));
+  await db
+    .update(schema.tasks)
+    .set({
+      status: "failed" as TaskStatus,
+      outputJson: JSON.stringify({
+        error: lastError?.message ?? "Unknown error",
+      }),
+      completedAt: new Date(),
+    })
+    .where(eq(schema.tasks.id, task.id));
+
+  // Even on failure, re-evaluate so other pending tasks can proceed
+  await evaluate(workflowId);
+}
+
+export async function recoverStaleTasks(): Promise<void> {
+  const staleTasks = await db
+    .select()
+    .from(schema.tasks)
+    .where(inArray(schema.tasks.status, ["running", "ready"]));
+
+  if (staleTasks.length === 0) return;
+
+  console.log(`Recovering ${staleTasks.length} stale tasks...`);
+
+  const staleIds = staleTasks.map((t) => t.id);
+  await db
+    .update(schema.tasks)
+    .set({ status: "pending" as TaskStatus, startedAt: null })
+    .where(inArray(schema.tasks.id, staleIds));
+
+  const workflowIds = new Set(staleTasks.map((t) => t.workflowId));
+
+  // Re-evaluate each affected workflow
+  for (const wid of workflowIds) {
+    await evaluate(wid);
   }
 }
 

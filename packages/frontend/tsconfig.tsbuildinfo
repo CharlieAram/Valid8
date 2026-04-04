@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/mock.ts","./src/components/analyticsbar.tsx","./src/components/clarification.tsx","./src/components/marketresearchpanel.tsx","./src/components/outreachpanel.tsx","./src/components/sidebar.tsx","./src/components/websitepreview.tsx","./src/pages/newworkflow.tsx","./src/pages/workflowview.tsx"],"version":"5.9.3"}

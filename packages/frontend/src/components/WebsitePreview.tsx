@@ -22,7 +22,6 @@ function openHtmlInNewTab(html: string): void {
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const blobUrl = URL.createObjectURL(blob);
   window.open(blobUrl, "_blank", "noopener,noreferrer");
-  // Revoke after the tab has time to read the blob (avoid leaking object URLs)
   setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 }
 
@@ -81,8 +80,6 @@ export default function WebsitePreview({ url, html, status }: Props) {
             className="w-full h-full border-0"
             sandbox="allow-scripts"
           />
-        ) : status === "completed" ? (
-          <PlaceholderPage />
         ) : status === "running" ? (
           <div className="text-sm text-gray-400 animate-pulse">Generating landing page...</div>
         ) : status === "failed" ? (
@@ -90,25 +87,6 @@ export default function WebsitePreview({ url, html, status }: Props) {
         ) : (
           <div className="text-sm text-gray-300">Waiting to start...</div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function PlaceholderPage() {
-  return (
-    <div className="p-6 text-center w-full">
-      <div className="max-w-xs mx-auto border border-dashed border-gray-300 rounded-lg p-8 bg-white">
-        <div className="text-base font-bold text-gray-800 mb-2">Your Landing Page</div>
-        <div className="text-xs text-gray-400 mb-4">
-          No page content yet — confirm your idea to generate one
-        </div>
-        <div className="space-y-2">
-          <div className="h-2 bg-gray-200 rounded w-3/4 mx-auto" />
-          <div className="h-2 bg-gray-200 rounded w-1/2 mx-auto" />
-          <div className="h-2 bg-gray-200 rounded w-2/3 mx-auto" />
-          <div className="h-8 bg-gray-900 rounded w-1/2 mx-auto mt-4" />
-        </div>
       </div>
     </div>
   );

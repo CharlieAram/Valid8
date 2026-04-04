@@ -1,20 +1,28 @@
-// InsForge integration — deploys landing pages to InsForge Storage
+// Landing pages: HTML stored locally for /p/:id; optional deploy to InsForge Storage.
 //
-// Required env vars:
-//   INSFORGE_URL     — Your project URL, e.g. https://your-project.insforge.app
-//   INSFORGE_API_KEY — API key from the InsForge dashboard
+// Env (InsForge deploy — optional):
+//   INSFORGE_URL     — e.g. https://your-project.insforge.app
+//   INSFORGE_API_KEY — from InsForge dashboard
 //
-// If not configured, the landing page handler still generates HTML via AI
-// but won't deploy it to a public URL. The frontend shows it via srcdoc.
+// Env (local preview URL in emails / UI):
+//   BASE_URL — e.g. http://localhost:3000 (default)
 //
 // Docs: https://docs.insforge.dev/sdks/rest/storage
+
+import { nanoid } from "nanoid";
+import { db, schema } from "../db/index.js";
 
 const INSFORGE_URL_RAW = process.env.INSFORGE_URL;
 const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY;
 const BUCKET = "landing-pages";
 
+const BASE_URL = (process.env.BASE_URL ?? `http://localhost:${process.env.PORT || 3000}`).replace(
+  /\/+$/,
+  "",
+);
+
 /** Base URL with no trailing slash — avoids `//api/...` when env has a trailing `/`. */
-function baseUrl(): string {
+function insforgeOrigin(): string {
   return (INSFORGE_URL_RAW ?? "").replace(/\/+$/, "");
 }
 
@@ -24,8 +32,8 @@ export function isConfigured(): boolean {
 
 let bucketReady = false;
 
-async function request(path: string, init: RequestInit = {}): Promise<Response> {
-  const origin = baseUrl();
+async function insforgeRequest(path: string, init: RequestInit = {}): Promise<Response> {
+  const origin = insforgeOrigin();
   if (!origin || !INSFORGE_API_KEY) {
     throw new Error("InsForge not configured — set INSFORGE_URL and INSFORGE_API_KEY");
   }
@@ -41,12 +49,11 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
 
 async function ensureBucket(): Promise<void> {
   if (bucketReady) return;
-  const res = await request("/api/storage/buckets", {
+  const res = await insforgeRequest("/api/storage/buckets", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bucketName: BUCKET, isPublic: true }),
   });
-  // 409 = bucket already exists, which is fine
   if (!res.ok && res.status !== 409) {
     const body = await res.text();
     throw new Error(`InsForge: failed to create bucket (${res.status}): ${body}`);
@@ -59,7 +66,7 @@ export interface UploadResult {
   key: string;
 }
 
-export async function uploadPage(workflowId: string, html: string): Promise<UploadResult> {
+async function uploadToInsforge(workflowId: string, html: string): Promise<UploadResult> {
   await ensureBucket();
 
   const key = `${workflowId}.html`;
@@ -67,7 +74,7 @@ export async function uploadPage(workflowId: string, html: string): Promise<Uplo
   const formData = new FormData();
   formData.append("file", blob, key);
 
-  const res = await request(
+  const res = await insforgeRequest(
     `/api/storage/buckets/${BUCKET}/objects/${encodeURIComponent(key)}`,
     { method: "PUT", body: formData },
   );
@@ -79,13 +86,47 @@ export async function uploadPage(workflowId: string, html: string): Promise<Uplo
 
   const data = (await res.json()) as { url: string; key?: string };
   const raw = data.url.trim();
-  // API may return a path (/api/...) or a full URL — never prefix "/" before "https://" or we break links.
   let publicUrl: string;
   if (/^https?:\/\//i.test(raw)) {
     publicUrl = raw;
   } else {
-    const path = raw.startsWith("/") ? raw : `/${raw}`;
-    publicUrl = `${baseUrl()}${path}`;
+    const p = raw.startsWith("/") ? raw : `/${raw}`;
+    publicUrl = `${insforgeOrigin()}${p}`;
   }
   return { url: publicUrl, key: data.key ?? key };
+}
+
+export interface GenerateLandingPageParams {
+  workflowId: string;
+  html: string;
+}
+
+export interface GenerateLandingPageResult {
+  pageId: string;
+  url: string;
+}
+
+/** Saves HTML locally, then tries InsForge — prefers hosted URL when configured. */
+export async function generateLandingPage(
+  params: GenerateLandingPageParams,
+): Promise<GenerateLandingPageResult> {
+  const pageId = nanoid();
+
+  await db.insert(schema.landingPages).values({
+    id: pageId,
+    workflowId: params.workflowId,
+    html: params.html,
+  });
+
+  if (isConfigured()) {
+    try {
+      const { url } = await uploadToInsforge(params.workflowId, params.html);
+      console.log(`[InsForge] Landing page deployed: ${url}`);
+      return { pageId, url };
+    } catch (err) {
+      console.error("[InsForge] Upload failed, using local /p URL:", err);
+    }
+  }
+
+  return { pageId, url: `${BASE_URL}/p/${pageId}` };
 }

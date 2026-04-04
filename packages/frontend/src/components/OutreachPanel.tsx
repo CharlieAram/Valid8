@@ -1,5 +1,26 @@
-import type { TaskStatus } from "@valid8/shared";
+import type { ContactOutput, TaskStatus } from "@valid8/shared";
 import type { ContactPipeline } from "../mock.ts";
+
+function LinkedInLine({ contact }: { contact: ContactOutput["contacts"][number] }) {
+  const url = contact.linkedinUrl ?? contact.discovery?.linkedinUrl;
+  if (!url) {
+    return (
+      <div className="mt-0.5 text-[10px] text-gray-400">No LinkedIn profile found</div>
+    );
+  }
+  return (
+    <div className="mt-0.5">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+      >
+        LinkedIn
+      </a>
+    </div>
+  );
+}
 
 const STAGE_STYLE: Record<TaskStatus, string> = {
   completed: "bg-green-500",
@@ -8,6 +29,7 @@ const STAGE_STYLE: Record<TaskStatus, string> = {
   pending: "bg-gray-300",
   waiting_for_input: "bg-amber-500",
   failed: "bg-red-500",
+  skipped: "bg-gray-400",
 };
 
 const STAGE_TEXT: Record<TaskStatus, string> = {
@@ -17,6 +39,7 @@ const STAGE_TEXT: Record<TaskStatus, string> = {
   pending: "text-gray-400",
   waiting_for_input: "text-amber-600",
   failed: "text-red-600",
+  skipped: "text-gray-400",
 };
 
 function Stage({ status, label }: { status: TaskStatus; label: string }) {
@@ -54,9 +77,11 @@ export default function OutreachPanel({ contacts }: { contacts: ContactPipeline[
             <Initials name={c.contact.name} />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">{c.contact.name}</div>
-              <div className="text-xs text-gray-400 truncate">
-                {c.contact.role}, {c.contact.company}
+              <div className="text-xs text-gray-500 truncate">
+                {c.contact.role}
+                <span className="text-gray-400"> · {c.contact.company}</span>
               </div>
+              <LinkedInLine contact={c.contact} />
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <Stage status={c.email} label="Email" />
