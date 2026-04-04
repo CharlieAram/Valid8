@@ -31,9 +31,9 @@ The workflow concludes with a direct summary of results, combining quantitative 
 - **Backend**: TypeScript, Hono, SQLite (via Drizzle ORM)
 - **Frontend**: React, Tailwind CSS, Vite
 - **AI**: Anthropic Claude (via Vercel AI SDK + @ai-sdk/anthropic)
-- **Email**: Agentsmail
+- **Email**: AgentMail (`agentmail` SDK — one inbox per workflow, sends via `client.inboxes.messages.send`)
 - **Voice**: ElevenLabs
-- **Landing pages**: Insforge
+- **Landing pages**: InsForge (`@insforge/sdk` — HTML stored in InsForge database, served via InsForge function)
 - **Web search**: TBD
 - **Monorepo**: pnpm workspaces
 

@@ -18,6 +18,8 @@ The workflow is a DAG, not a linear pipeline. Tasks declare dependencies and run
 - **Backend**: TypeScript, Hono, SQLite (Drizzle ORM)
 - **Frontend**: React, Tailwind CSS, Vite
 - **AI**: Anthropic Claude via Vercel AI SDK
+- **Email**: AgentMail
+- **Landing pages**: InsForge
 - **Monorepo**: pnpm workspaces
 
 ## Setup
@@ -30,6 +32,9 @@ Create a `.env` file in the project root:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
+AGENTMAIL_API_KEY=am_...
+INSFORGE_BASE_URL=https://your-app.insforge.app
+INSFORGE_ANON_KEY=your-anon-key
 ```
 
 ## Development

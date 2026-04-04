@@ -19,6 +19,9 @@ importers:
       '@valid8/shared':
         specifier: workspace:*
         version: link:../shared
+      agentmail:
+        specifier: ^0.4.17
+        version: 0.4.17
       ai:
         specifier: ^6.0.146
         version: 6.0.146(zod@3.25.76)
@@ -1134,6 +1137,10 @@ packages:
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
 
+  agentmail@0.4.17:
+    resolution: {integrity: sha512-WAXMiZuRcv5yTpeZP7lci2jhskWBKuB0XVXsXUie5n/Qvkkd9KkFRZF1ROW5UIrW8WHEoLP4kDGRmtvsjQCEqA==}
+    engines: {node: '>=18.0.0'}
+
   ai@6.0.146:
     resolution: {integrity: sha512-70DE8k1rR0N3mXxyyfjYAx/FxRln/kQ5ym18lt1ys1eUklcPuoIXGbUBwdfCbmkt6YF3jCDZ5+OgkWieP/NGDw==}
     engines: {node: '>=18'}
@@ -1856,6 +1863,18 @@ packages:
 
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
+
+  ws@8.20.0:
+    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
 
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
@@ -2580,6 +2599,13 @@ snapshots:
       loupe: 3.2.1
       tinyrainbow: 2.0.0
 
+  agentmail@0.4.17:
+    dependencies:
+      ws: 8.20.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   ai@6.0.146(zod@3.25.76):
     dependencies:
       '@ai-sdk/gateway': 3.0.88(zod@3.25.76)
@@ -3250,6 +3276,8 @@ snapshots:
       stackback: 0.0.2
 
   wrappy@1.0.2: {}
+
+  ws@8.20.0: {}
 
   yallist@3.1.1: {}
 

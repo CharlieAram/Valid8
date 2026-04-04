@@ -6,6 +6,7 @@ import type {
   MarketResearchOutput,
   AssumptionOutput,
   PersonaOutput,
+  ContactOutput,
   ResultsSummaryOutput,
 } from "@valid8/shared";
 
@@ -186,6 +187,104 @@ Idea: ${idea}
 
 All collected data:
 ${JSON.stringify(taskOutputs, null, 2)}`,
+  });
+  return object;
+}
+
+export async function generateLandingPageHtml(
+  idea: IdeaConfirmationOutput
+): Promise<string> {
+  const { text } = await generateText({
+    model,
+    prompt: `Generate a complete, self-contained HTML landing page for this B2B product. The page should be clean, professional, and conversion-focused. Include a hero section, value proposition, key benefits, social proof placeholder, and a clear CTA (email signup form). Use inline CSS. The page must be a single HTML file with no external dependencies.
+
+Product summary: ${idea.summary}
+Target market: ${idea.targetMarket}
+Value proposition: ${idea.valueProposition}
+Revenue model: ${idea.revenueModel}
+
+Return ONLY the HTML, no markdown fences or explanation.`,
+  });
+  return text;
+}
+
+export async function generatePersonalizedPageHtml(
+  baseHtml: string,
+  contact: { name: string; company: string; role: string }
+): Promise<string> {
+  const { text } = await generateText({
+    model,
+    prompt: `Take this landing page HTML and personalize it for a specific prospect. Adjust the headline, subheadline, and CTA copy to speak directly to their role and company. Keep the same layout and styling. Do NOT change the form or its action.
+
+Contact: ${contact.name}, ${contact.role} at ${contact.company}
+
+Base HTML:
+${baseHtml}
+
+Return ONLY the modified HTML, no markdown fences or explanation.`,
+  });
+  return text;
+}
+
+export async function generateContacts(
+  persona: PersonaOutput["personas"][number],
+  idea: string,
+  count: number = 3
+): Promise<Array<{ name: string; email: string; company: string; role: string; linkedinUrl?: string }>> {
+  const { object } = await generateObject({
+    model,
+    schema: z.object({
+      contacts: z.array(
+        z.object({
+          name: z.string().describe("A realistic full name"),
+          email: z.string().describe("A realistic business email"),
+          company: z.string().describe("A real company that fits this persona"),
+          role: z.string().describe("Their specific job title"),
+          linkedinUrl: z.string().optional(),
+        })
+      ),
+    }),
+    prompt: `Generate ${count} realistic synthetic contacts for outreach testing. These should be plausible people who match this target persona at real companies in this space. Use realistic names and company-appropriate email formats (e.g., firstname@company.com). These are for validation testing purposes.
+
+Persona: ${persona.title}
+Description: ${persona.description}
+Target companies: ${persona.companies.join(", ")}
+Pain points: ${persona.painPoints.join(", ")}
+
+Business idea being validated: ${idea}
+
+Generate contacts that would be real decision-makers or influencers for this type of product.`,
+  });
+  return object.contacts;
+}
+
+export async function generateOutreachEmail(
+  contact: { name: string; company: string; role: string },
+  idea: IdeaConfirmationOutput,
+  pageUrl: string
+): Promise<{ subject: string; body: string; html: string }> {
+  const { object } = await generateObject({
+    model,
+    schema: z.object({
+      subject: z.string().describe("Short, compelling email subject line (no spam triggers)"),
+      body: z.string().describe("Plain text email body"),
+      html: z.string().describe("HTML email body with simple formatting"),
+    }),
+    prompt: `Write a personalized cold outreach email for B2B idea validation. The email should:
+- Be concise (under 150 words)
+- Reference the contact's specific role and company
+- Lead with a relevant pain point or insight
+- Include a soft CTA to check out the landing page
+- Sound human, not templated
+- NOT be salesy or pushy — this is research/validation, not a hard sell
+
+Contact: ${contact.name}, ${contact.role} at ${contact.company}
+Product: ${idea.summary}
+Value proposition: ${idea.valueProposition}
+Target market: ${idea.targetMarket}
+Landing page URL: ${pageUrl}
+
+The HTML should be clean and simple — no heavy design, just well-formatted text with the link.`,
   });
   return object;
 }

@@ -46,3 +46,23 @@ export function confirmIdea(
     body: JSON.stringify({ confirmed, revisedIdea } satisfies ConfirmIdeaRequest),
   });
 }
+
+export function deleteWorkflow(id: string): Promise<{ ok: boolean }> {
+  return request(`/workflows/${id}`, { method: "DELETE" });
+}
+
+export function addContacts(
+  workflowId: string,
+  contacts: Array<{ name: string; email: string; company: string; role: string }>
+): Promise<{ contacts: Array<{ id: string; name: string; email: string; company: string; role: string }> }> {
+  return request(`/workflows/${workflowId}/contacts`, {
+    method: "POST",
+    body: JSON.stringify({ contacts }),
+  });
+}
+
+export function getContacts(
+  workflowId: string
+): Promise<Array<{ id: string; name: string; email: string; company: string; role: string }>> {
+  return request(`/workflows/${workflowId}/contacts`);
+}

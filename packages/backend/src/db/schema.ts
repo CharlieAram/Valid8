@@ -47,13 +47,25 @@ export const contacts = sqliteTable("contacts", {
   linkedinUrl: text("linkedin_url"),
 });
 
+export const landingPages = sqliteTable("landing_pages", {
+  id: text("id").primaryKey(),
+  workflowId: text("workflow_id")
+    .notNull()
+    .references(() => workflows.id),
+  html: text("html").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export const landingPageVariants = sqliteTable("landing_page_variants", {
   id: text("id").primaryKey(),
   workflowId: text("workflow_id")
     .notNull()
     .references(() => workflows.id),
-  contactId: text("contact_id").references(() => contacts.id),
-  basePageId: text("base_page_id"),
+  contactId: text("contact_id"),
+  basePageId: text("base_page_id").references(() => landingPages.id),
+  html: text("html").notNull(),
   url: text("url").notNull(),
   personalizationJson: text("personalization_json"),
 });

@@ -4,6 +4,7 @@ export type TaskStatus =
   | "running"
   | "completed"
   | "failed"
+  | "skipped"
   | "waiting_for_input";
 
 export type TaskType =

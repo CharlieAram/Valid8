@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { db, schema } from "../db/index.js";
 import {
   createWorkflow,
@@ -31,9 +32,16 @@ function toTaskView(t: TaskRow): TaskView {
 function deriveStatus(tasks: TaskView[]): WorkflowView["status"] {
   if (tasks.length === 0) return "running";
   if (tasks.some((t) => t.status === "waiting_for_input")) return "waiting_for_input";
+  const hasActive = tasks.some((t) =>
+    t.status === "running" || t.status === "ready" || t.status === "pending"
+  );
+  if (hasActive) return "running";
+  // If results_summary completed, the workflow is done regardless of individual task failures
+  const resultsDone = tasks.some((t) => t.type === "results_summary" && t.status === "completed");
+  if (resultsDone) return "completed";
+  if (tasks.every((t) => t.status === "completed" || t.status === "skipped")) return "completed";
   if (tasks.some((t) => t.status === "failed")) return "failed";
-  if (tasks.every((t) => t.status === "completed")) return "completed";
-  return "running";
+  return "completed";
 }
 
 function toWorkflowView(
@@ -41,7 +49,7 @@ function toWorkflowView(
   taskRows: TaskRow[]
 ): WorkflowView {
   const tasks = taskRows.map(toTaskView);
-  const completed = tasks.filter((t) => t.status === "completed").length;
+  const completed = tasks.filter((t) => t.status === "completed" || t.status === "skipped").length;
   return {
     id: w.id,
     ideaText: w.ideaText,
@@ -140,6 +148,67 @@ app.post("/:id/confirm", async (c) => {
 
   await completeHumanTask(confirmTask.id, output);
   return c.json({ status: "confirmed" });
+});
+
+// Add contacts manually to a workflow (before contact_discovery runs)
+app.post("/:id/contacts", async (c) => {
+  const workflowId = c.req.param("id");
+  const body = await c.req.json<{
+    contacts: Array<{ name: string; email: string; company: string; role: string }>;
+  }>();
+
+  if (!body.contacts?.length) {
+    return c.json({ error: "contacts array is required" }, 400);
+  }
+
+  const inserted = [];
+  for (const contact of body.contacts) {
+    const id = nanoid();
+    await db.insert(schema.contacts).values({
+      id,
+      workflowId,
+      name: contact.name,
+      email: contact.email,
+      company: contact.company,
+      role: contact.role,
+    });
+    inserted.push({ id, ...contact });
+  }
+
+  return c.json({ contacts: inserted }, 201);
+});
+
+// Get contacts for a workflow
+app.get("/:id/contacts", async (c) => {
+  const workflowId = c.req.param("id");
+  const contacts = await db
+    .select()
+    .from(schema.contacts)
+    .where(eq(schema.contacts.workflowId, workflowId));
+  return c.json(contacts);
+});
+
+// Delete a workflow and all associated data
+app.delete("/:id", async (c) => {
+  const workflowId = c.req.param("id");
+
+  // Delete in order respecting foreign keys
+  const variants = await db
+    .select({ id: schema.landingPageVariants.id })
+    .from(schema.landingPageVariants)
+    .where(eq(schema.landingPageVariants.workflowId, workflowId));
+
+  for (const v of variants) {
+    await db.delete(schema.pageEvents).where(eq(schema.pageEvents.variantId, v.id));
+  }
+  await db.delete(schema.landingPageVariants).where(eq(schema.landingPageVariants.workflowId, workflowId));
+  await db.delete(schema.landingPages).where(eq(schema.landingPages.workflowId, workflowId));
+  await db.delete(schema.contacts).where(eq(schema.contacts.workflowId, workflowId));
+  await db.delete(schema.personas).where(eq(schema.personas.workflowId, workflowId));
+  await db.delete(schema.tasks).where(eq(schema.tasks.workflowId, workflowId));
+  await db.delete(schema.workflows).where(eq(schema.workflows.id, workflowId));
+
+  return c.json({ ok: true });
 });
 
 app.get("/:id/results", async (c) => {
