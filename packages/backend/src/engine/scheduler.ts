@@ -355,6 +355,7 @@ async function seedWorkflowTasks(workflowId: string): Promise<void> {
     "persona_identification",
     "contact_discovery",
     "results_summary",
+    "pivot_proposals",
   ];
 
   const existing = await db

@@ -10,6 +10,7 @@ import { sendEmailHandler } from "./send-email.js";
 import { voiceCallHandler } from "./voice-call.js";
 import { scheduleHumanCallHandler } from "./schedule-human-call.js";
 import { resultsSummaryHandler } from "./results-summary.js";
+import { pivotProposalsHandler } from "./pivot-proposals.js";
 
 export function registerAllHandlers() {
   registerHandler(ideaConfirmationHandler);
@@ -23,4 +24,5 @@ export function registerAllHandlers() {
   registerHandler(voiceCallHandler);
   registerHandler(scheduleHumanCallHandler);
   registerHandler(resultsSummaryHandler);
+  registerHandler(pivotProposalsHandler);
 }

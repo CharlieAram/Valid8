@@ -135,3 +135,13 @@ export interface ResultsSummaryOutput {
   recommendation: string;
   pivotSuggestions?: string[];
 }
+
+export interface PivotProposalsOutput {
+  pivots: Array<{
+    idea: string;
+    rationale: string;
+    targetMarket: string;
+    differentiator: string;
+    confidence: number;
+  }>;
+}

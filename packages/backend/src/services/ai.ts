@@ -8,6 +8,7 @@ import type {
   PersonaOutput,
   ContactOutput,
   ResultsSummaryOutput,
+  PivotProposalsOutput,
 } from "@valid8/shared";
 import type {
   LandingPageContent,
@@ -41,7 +42,8 @@ Idea: ${ideaText}`,
 }
 
 export async function generateMarketResearch(
-  idea: string
+  idea: string,
+  webContext: string | null
 ): Promise<MarketResearchOutput> {
   const { object } = await generateObject({
     model,
@@ -60,9 +62,9 @@ export async function generateMarketResearch(
       opportunities: z.array(z.string()),
       risks: z.array(z.string()),
     }),
-    prompt: `Conduct deep market research for this B2B software idea. Identify real competitors, market trends, opportunities, and risks. Be specific with names and data.
+    prompt: `Conduct deep market research for this B2B software idea. Identify real competitors, market trends, opportunities, and risks. Be specific with names and data. Ground your analysis in the web research provided below — cite real companies, real numbers, and real trends.
 
-Idea: ${idea}`,
+Idea: ${idea}${webContext ? `\n\nWeb Research:\n${webContext}` : ""}`,
   });
   return object;
 }
@@ -337,6 +339,45 @@ Target market: ${idea.targetMarket}
 Landing page URL: ${pageUrl}
 
 The HTML should be clean and simple — no heavy design, just well-formatted text with the link.`,
+  });
+  return object;
+}
+
+export async function generatePivotProposals(
+  idea: string,
+  results: ResultsSummaryOutput,
+  research: MarketResearchOutput
+): Promise<PivotProposalsOutput> {
+  const { object } = await generateObject({
+    model,
+    schema: z.object({
+      pivots: z.array(
+        z.object({
+          idea: z.string().describe("A concise description of the pivoted business idea"),
+          rationale: z.string().describe("Why this pivot makes sense given the validation data"),
+          targetMarket: z.string().describe("Who this pivot targets"),
+          differentiator: z.string().describe("What makes this different from the original idea and competitors"),
+          confidence: z.number().min(0).max(100).describe("How confident are we this pivot is worth pursuing"),
+        })
+      ),
+    }),
+    prompt: `Based on the validation results for this B2B idea, propose 2-4 alternative business directions (pivots). Each should be grounded in signals from the validation data — objections, positive signals, and market gaps.
+
+Only propose pivots if the data suggests them. If the original idea validated well, propose variations that could be even stronger. If it failed, propose directions informed by what the market actually wants.
+
+Original idea: ${idea}
+
+Validation verdict: ${results.verdict} (${results.confidence}% confidence)
+Recommendation: ${results.recommendation}
+Key insights: ${results.qualitative.keyInsights.join("; ")}
+Common objections: ${results.qualitative.commonObjections.join("; ")}
+Positive signals: ${results.qualitative.positiveSignals.join("; ")}
+${results.pivotSuggestions?.length ? `Initial pivot hints: ${results.pivotSuggestions.join("; ")}` : ""}
+
+Market context:
+- Competitors: ${research.competitors.map((c) => c.name).join(", ")}
+- Opportunities: ${research.opportunities.join("; ")}
+- Risks: ${research.risks.join("; ")}`,
   });
   return object;
 }
