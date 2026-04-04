@@ -86,7 +86,7 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
               <button
                 onClick={handleRevise}
                 disabled={!revised.trim() || busy}
-                className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-800 disabled:opacity-30 transition-all"
+                className="px-5 py-2.5 bg-neutral-900 text-white text-sm font-medium cursor-pointer hover:bg-neutral-800 disabled:opacity-30 transition-all"
               >
                 Re-analyze
               </button>
@@ -103,13 +103,13 @@ export default function Clarification({ ideaText, confirmation, onConfirm, onRev
             <button
               onClick={handleConfirm}
               disabled={busy}
-              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-800 disabled:opacity-30 transition-all"
+              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium cursor-pointer hover:bg-neutral-800 disabled:opacity-30 transition-all"
             >
               {busy ? "Starting..." : "Looks right, start"}
             </button>
             <button
               onClick={() => setEditing(true)}
-              className="px-6 py-2.5 border border-neutral-200 text-neutral-700 text-sm font-medium hover:bg-neutral-50 transition-all"
+              className="px-6 py-2.5 border border-neutral-200 text-neutral-700 text-sm font-medium cursor-pointer hover:bg-neutral-50 transition-all"
             >
               Not quite, let me clarify
             </button>

@@ -58,7 +58,7 @@ export default function NewWorkflow() {
             <button
               type="submit"
               disabled={!idea.trim() || submitting}
-              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="px-6 py-2.5 bg-neutral-900 text-white text-sm font-medium cursor-pointer hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             >
               {submitting ? "Analyzing..." : "Start validation"}
             </button>
