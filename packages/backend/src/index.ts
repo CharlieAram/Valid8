@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { serve } from "@hono/node-server";
 import { registerAllHandlers } from "./handlers/index.js";
 import { recoverStaleTasks } from "./engine/scheduler.js";
@@ -31,6 +32,10 @@ app.route("/api/call", callRoutes);
 app.route("/p", pageRoutes);
 
 app.get("/api/health", (c) => c.json({ ok: true }));
+
+// Serve frontend static files in production
+app.use("/assets/*", serveStatic({ root: "./public" }));
+app.get("*", serveStatic({ root: "./public", path: "index.html" }));
 
 const port = Number(process.env.PORT) || 3000;
 console.log(`Valid8 backend running on http://localhost:${port}`);
