@@ -50,9 +50,11 @@ export const contactDiscoveryHandler: TaskHandler<Input, ContactOutput> = {
         }
       }
 
+      console.log(`[Valid8] contact_discovery: ${targets.length} targets to enrich`);
       // Enrich in batches of 5 to avoid rate limits
       const BATCH_SIZE = 5;
       for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+        console.log(`[Valid8] contact_discovery: enriching batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(targets.length / BATCH_SIZE)}`);
         const batch = targets.slice(i, i + BATCH_SIZE);
         const results = await Promise.allSettled(
           batch.map((t, j) =>

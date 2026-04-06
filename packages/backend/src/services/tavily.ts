@@ -41,6 +41,7 @@ export async function tavilySearch(
       max_results: options?.maxResults ?? 8,
       include_answer: options?.includeAnswer ?? true,
     }),
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {

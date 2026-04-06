@@ -209,7 +209,13 @@ async function executeTask(
       }
 
       const input = handler.resolveInput(ctx);
-      const output = await handler.execute(input, ctx);
+      const TASK_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+      const output = await Promise.race([
+        handler.execute(input, ctx),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Task ${task.type} timed out after 5 minutes`)), TASK_TIMEOUT)
+        ),
+      ]);
 
       await db
         .update(schema.tasks)

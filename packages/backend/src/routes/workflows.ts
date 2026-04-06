@@ -5,6 +5,7 @@ import { db, schema } from "../db/index.js";
 import {
   createWorkflow,
   completeHumanTask,
+  evaluate,
 } from "../engine/scheduler.js";
 import { generateIdeaConfirmation } from "../services/ai.js";
 import type {
@@ -100,6 +101,14 @@ app.get("/:id", async (c) => {
     .select()
     .from(schema.tasks)
     .where(eq(schema.tasks.workflowId, workflowId));
+
+  // Opportunistic re-evaluation: if there are pending tasks but nothing running,
+  // the scheduler might have stalled — kick it.
+  const hasPending = tasks.some((t) => t.status === "pending");
+  const hasRunning = tasks.some((t) => t.status === "running" || t.status === "ready");
+  if (hasPending && !hasRunning) {
+    evaluate(workflowId).catch(() => {});
+  }
 
   return c.json(toWorkflowView(workflow, tasks));
 });
@@ -205,6 +214,13 @@ app.delete("/:id", async (c) => {
   await db.delete(schema.tasks).where(eq(schema.tasks.workflowId, workflowId));
   await db.delete(schema.workflows).where(eq(schema.workflows.id, workflowId));
 
+  return c.json({ ok: true });
+});
+
+// Force re-evaluation of workflow tasks (unstick stalled workflows)
+app.post("/:id/evaluate", async (c) => {
+  const workflowId = c.req.param("id");
+  await evaluate(workflowId);
   return c.json({ ok: true });
 });
 
